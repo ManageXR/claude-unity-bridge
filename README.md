@@ -1,0 +1,209 @@
+# Claude Unity Bridge
+
+File-based bridge enabling Claude Code to trigger Unity Editor operations in a running editor instance.
+
+## Features
+
+- **Run Tests** - Execute EditMode or PlayMode tests
+- **Compile** - Trigger script compilation
+- **Refresh** - Force asset database refresh
+- **Get Status** - Check editor compilation/update state
+- **Get Console Logs** - Retrieve Unity console output
+
+## Installation
+
+### Via Package Manager (Git URL)
+
+1. Open Unity Editor
+2. Go to `Window > Package Manager`
+3. Click the `+` button in the top-left corner
+4. Select `Add package from git URL...`
+5. Enter: `https://github.com/ManageXR/claude-unity-bridge.git`
+6. Click `Add`
+
+### Via Package Manager (Local Path)
+
+For development or testing:
+
+1. Clone this repository to your local machine
+2. Open Unity Editor
+3. Go to `Window > Package Manager`
+4. Click the `+` button in the top-left corner
+5. Select `Add package from disk...`
+6. Navigate to the cloned repository and select `package.json`
+7. Click `Open`
+
+### Via manifest.json
+
+Add this line to your project's `Packages/manifest.json`:
+
+```json
+{
+  "dependencies": {
+    "com.managexr.claude-bridge": "https://github.com/ManageXR/claude-unity-bridge.git"
+  }
+}
+```
+
+## How It Works
+
+ClaudeBridge uses a file-based protocol for communication:
+
+1. **Command File**: Claude Code writes commands to `.claude/unity/command.json`
+2. **Processing**: Unity Editor polls for commands and executes them
+3. **Response File**: Results are written to `.claude/unity/response-{id}.json`
+
+This approach enables multi-project support - each Unity project has its own `.claude/unity/` directory, allowing multiple agents to work on different projects simultaneously.
+
+## Usage
+
+### Run Tests
+
+```json
+{
+  "id": "test-001",
+  "action": "run-tests",
+  "params": {
+    "testMode": "EditMode",
+    "filter": "MXR.Tests"
+  }
+}
+```
+
+**Parameters:**
+- `testMode` - `"EditMode"` or `"PlayMode"`
+- `filter` (optional) - Test filter pattern
+
+### Compile Scripts
+
+```json
+{
+  "id": "compile-001",
+  "action": "compile",
+  "params": {}
+}
+```
+
+### Refresh Assets
+
+```json
+{
+  "id": "refresh-001",
+  "action": "refresh",
+  "params": {}
+}
+```
+
+### Get Editor Status
+
+```json
+{
+  "id": "status-001",
+  "action": "get-status",
+  "params": {}
+}
+```
+
+### Get Console Logs
+
+```json
+{
+  "id": "logs-001",
+  "action": "get-console-logs",
+  "params": {
+    "limit": 20,
+    "filter": "Error"
+  }
+}
+```
+
+**Parameters:**
+- `limit` (optional) - Maximum number of logs to retrieve (default: 50)
+- `filter` (optional) - Filter by log type: `"Log"`, `"Warning"`, or `"Error"`
+
+## Response Format
+
+All commands return a response in this format:
+
+```json
+{
+  "id": "test-001",
+  "status": "success",
+  "action": "run-tests",
+  "duration_ms": 1250,
+  "result": {
+    "passed": 410,
+    "failed": 0,
+    "skipped": 0
+  }
+}
+```
+
+**Status Values:**
+- `running` - Command in progress
+- `success` - Command completed successfully
+- `failure` - Command completed with failures
+- `error` - Command execution error
+
+## Tools Menu
+
+The package adds menu items under `Tools > Claude Bridge`:
+
+- **Show Status** - Display current bridge status in console
+- **Cleanup Old Responses** - Delete response files older than 1 hour
+
+## Multi-Project Support
+
+Each Unity project maintains its own command/response directory at `.claude/unity/`. This allows Claude Code to manage multiple Unity projects simultaneously without port conflicts or configuration changes.
+
+## Architecture
+
+### File Structure
+
+```
+Editor/
+├── ClaudeBridge.cs          # Main coordinator
+├── ClaudeBridge.asmdef      # Assembly definition
+├── Commands/
+│   ├── ICommand.cs          # Command interface
+│   ├── RunTestsCommand.cs   # Test execution
+│   ├── CompileCommand.cs    # Script compilation
+│   ├── RefreshCommand.cs    # Asset refresh
+│   ├── GetStatusCommand.cs  # Editor status
+│   └── GetConsoleLogsCommand.cs  # Console logs
+└── Models/
+    ├── CommandRequest.cs    # Request DTO
+    └── CommandResponse.cs   # Response DTO
+```
+
+### Command Pattern
+
+All commands implement `ICommand`:
+
+```csharp
+public interface ICommand {
+    void Execute(
+        CommandRequest request,
+        Action<CommandResponse> onProgress,
+        Action<CommandResponse> onComplete
+    );
+}
+```
+
+This enables:
+- Progress reporting during execution
+- Consistent error handling
+- Easy extension with new commands
+
+## Requirements
+
+- Unity 2021.3 or later
+- No additional dependencies
+
+## License
+
+MIT
+
+## Support
+
+For issues or questions, visit: https://github.com/ManageXR/claude-unity-bridge/issues

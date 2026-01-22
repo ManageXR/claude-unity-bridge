@@ -1,0 +1,18 @@
+{
+  "name": "com.managexr.claude-bridge",
+  "version": "1.0.0",
+  "displayName": "Claude Unity Bridge",
+  "description": "File-based bridge enabling Claude Code to trigger Unity Editor operations (tests, compile, refresh) in a running editor instance.",
+  "unity": "2021.3",
+  "documentationUrl": "https://github.com/ManageXR/claude-unity-bridge",
+  "dependencies": {},
+  "keywords": [
+    "claude",
+    "ai",
+    "testing",
+    "automation"
+  ],
+  "author": {
+    "name": "ManageXR"
+  }
+}
