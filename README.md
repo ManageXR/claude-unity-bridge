@@ -152,6 +152,68 @@ The package adds menu items under `Tools > Claude Bridge`:
 - **Show Status** - Display current bridge status in console
 - **Cleanup Old Responses** - Delete response files older than 1 hour
 
+## Claude Code Skill
+
+For a better user experience, install the companion Claude Code skill that provides:
+
+- **Natural Language Interface** - Ask Claude to "run Unity tests" instead of writing JSON
+- **Rock-Solid Execution** - Deterministic Python script handles all edge cases
+- **Beautiful Formatting** - Human-readable output with file paths and error details
+- **Automatic Cleanup** - Manages response files automatically
+
+### Installation
+
+**Option 1: Using GNU Stow (recommended)**
+
+If you have [GNU Stow](https://www.gnu.org/software/stow/) installed:
+
+```bash
+cd /path/to/claude-unity-bridge
+stow -t ~/.codex/skills/unity -d . skill
+```
+
+To uninstall:
+```bash
+stow -t ~/.codex/skills/unity -d . -D skill
+```
+
+**Option 2: Using symlink**
+
+```bash
+ln -s "$(pwd)/skill" ~/.codex/skills/unity
+```
+
+**Option 3: Copy (not recommended)**
+
+```bash
+cp -r skill ~/.codex/skills/unity
+```
+
+Both Stow and symlink keep the skill updated automatically when you pull changes from git. Then restart Claude Code. The skill will auto-activate when you're working in a Unity project directory.
+
+### Usage Examples
+
+Once installed, simply ask Claude Code naturally:
+
+- "Run the Unity tests in EditMode"
+- "Check if there are any compilation errors"
+- "Show me the last 10 error logs from Unity"
+- "Refresh the Unity asset database"
+
+Claude will automatically use the skill to execute commands and format the results.
+
+### Documentation
+
+See `skill/SKILL.md` for complete documentation:
+- Command usage and examples
+- Error handling and troubleshooting
+- Advanced options (timeouts, cleanup, verbose mode)
+- Integration patterns for CI/CD
+
+See `skill/references/` for detailed references:
+- `COMMANDS.md` - Complete command specification
+- `EXTENDING.md` - Guide for adding custom commands
+
 ## Multi-Project Support
 
 Each Unity project maintains its own command/response directory at `.claude/unity/`. This allows Claude Code to manage multiple Unity projects simultaneously without port conflicts or configuration changes.
