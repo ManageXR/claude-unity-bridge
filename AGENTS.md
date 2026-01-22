@@ -110,14 +110,25 @@ git commit -m "test: Add tests and CI"
 - **CI**: GitHub Actions runs on Python 3.8-3.11, Ubuntu/macOS/Windows
 
 ### Unity Package Tests
-- **Current State**: No automated tests exist for the Unity C# code yet
-- **Manual Testing**: Currently requires manual verification in Unity Editor
-- **Future Improvement**: Should add Unity Test Framework tests for:
-  - Individual command implementations (RunTestsCommand, CompileCommand, etc.)
-  - ClaudeBridge dispatcher logic
-  - Request/Response serialization
-  - Can be automated via Unity CLI batch mode in CI
-- **For Now**: Verify Unity-side changes manually via testing with real Unity projects
+- **Framework**: Unity Test Framework (NUnit)
+- **Location**: `Tests/Editor/`
+- **Current Coverage**: GetStatusCommand (8 tests, Phase 1 complete)
+- **Run Tests**: Open Unity Editor → Window > General > Test Runner → EditMode → Run All
+- **Testing Philosophy**: Test real behavior, not mocks (see implementation plan)
+  - Mock dependencies (file system, Unity APIs), test YOUR logic's response
+  - Focus on state transitions, error handling, response construction
+  - Avoid testing that mocks return what you set up
+- **Test Infrastructure**:
+  - `Tests/Editor/MXR.ClaudeBridge.Tests.Editor.asmdef` - Test assembly definition
+  - `Tests/Editor/TestHelpers/CommandTestFixture.cs` - Base class for command tests
+  - `Tests/Editor/TestHelpers/ResponseCapture.cs` - Utility to capture callbacks
+- **Phased Rollout** (matching Python suite quality - 22 tests, 95% coverage):
+  - ✅ Phase 1: Foundation + GetStatusCommand (8 tests) - COMPLETE
+  - ⏳ Phase 2: RefreshCommand + model tests (~17 tests)
+  - ⏳ Phase 3: CompileCommand async tests (~9 tests)
+  - ⏳ Phase 4: RunTestsCommand + GetConsoleLogsCommand (~33 tests)
+  - ⏳ Phase 5: ClaudeBridge dispatcher tests (~15 tests)
+  - ⏳ Phase 6: CI/CD integration (deferred - licensing discussion needed)
 
 ### Test-Driven Development
 When modifying `unity_command.py`:
@@ -136,22 +147,28 @@ When modifying `unity_command.py`:
    - Untested changes break the deterministic guarantee
    - Always update `skill/tests/test_unity_command.py`
 
-2. **NEVER use in-context file I/O for Unity commands**
+2. **NEVER modify Unity commands without updating Unity tests**
+   - Command implementations must maintain test coverage
+   - Run Unity Test Runner after changes (Window > General > Test Runner)
+   - Update corresponding test file in `Tests/Editor/Commands/`
+   - Maintain the testing philosophy: test real behavior, not mocks
+
+3. **NEVER use in-context file I/O for Unity commands**
    - Always use the Python script
    - Don't implement command writing/polling in prompts
    - The script handles all edge cases (file locking, timeouts, cleanup)
 
-3. **NEVER write to Unity project files while Unity Editor is running**
+4. **NEVER write to Unity project files while Unity Editor is running**
    - Unity locks files when open
    - File writes can corrupt project state
    - Use the bridge protocol instead
 
-4. **NEVER change response format without updating formatters**
+5. **NEVER change response format without updating formatters**
    - Unity-side response format is in `Models/CommandResponse.cs`
    - Python formatters are in `unity_command.py` (format_* functions)
    - These must stay in sync
 
-5. **NEVER remove error handling from commands**
+6. **NEVER remove error handling from commands**
    - All Unity commands must use try-catch
    - All must call `onComplete` exactly once
    - All should call `onProgress` for long operations
@@ -163,17 +180,22 @@ When modifying `unity_command.py`:
    cd skill && pytest tests/test_unity_command.py -v
    ```
 
-2. **ALWAYS use descriptive commit messages**
+2. **ALWAYS run Unity tests before committing C# changes**
+   - Open Unity Editor with project loaded
+   - Window > General > Test Runner > EditMode > Run All
+   - Verify all tests pass before committing
+
+3. **ALWAYS use descriptive commit messages**
    - Format: `feat:`, `fix:`, `docs:`, `test:`, `chore:`
    - Include context about what and why
    - Reference issues if applicable
 
-3. **ALWAYS update documentation when changing behavior**
+4. **ALWAYS update documentation when changing behavior**
    - Update `SKILL.md` for user-facing changes
    - Update `COMMANDS.md` for command spec changes
    - Update `EXTENDING.md` for architecture changes
 
-4. **ALWAYS use the Python script's exit codes correctly**
+5. **ALWAYS use the Python script's exit codes correctly**
    - 0: Success
    - 1: Error (Unity not running, invalid params, command failed)
    - 2: Timeout
@@ -474,29 +496,32 @@ test: Add pytest tests for scene validation
 
 ## Future Improvements / Known Gaps
 
-### Unity C# Testing (High Priority)
-The Unity package currently has **no automated tests**. This should be addressed:
+### Unity C# Testing (In Progress - Phase 1 Complete)
+The Unity package now has test infrastructure established:
 
-**What to Add:**
-- Unity Test Framework tests in `Editor/Tests/` or `Tests/Editor/`
-- Test each command implementation (RunTestsCommand, CompileCommand, etc.)
-- Test ClaudeBridge dispatcher and command routing
-- Test request/response serialization/deserialization
-- Mock UnityEditor APIs for unit testing
+**Phase 1 Complete (Foundation):**
+- ✅ Test assembly definition with NUnit framework
+- ✅ Base test fixtures (`CommandTestFixture`, `ResponseCapture`)
+- ✅ GetStatusCommand tests (8 tests covering response construction, callback contracts, JSON serialization)
+- ✅ Local testing workflow via Unity Test Runner
 
-**CI Integration:**
-```bash
-# Unity can run tests in batch mode
-unity -runTests -batchmode -projectPath . -testResults results.xml -testPlatform EditMode
-```
+**Remaining Phases:**
+- Phase 2: RefreshCommand + model serialization tests
+- Phase 3: CompileCommand async/event-driven tests
+- Phase 4: RunTestsCommand + GetConsoleLogsCommand complex tests
+- Phase 5: ClaudeBridge dispatcher with file system mocking
+- Phase 6: CI/CD integration (requires Unity license strategy discussion)
 
-**Why This Matters:**
-- Python script has 22 tests with 95% coverage
-- Unity side has 0 tests - inconsistent quality bar
-- Manual testing catches obvious bugs but misses edge cases
-- Automated tests enable confident refactoring
+**Testing Philosophy:**
+- Test REAL behavior: state transitions, error handling, response construction
+- Mock dependencies (file system, Unity APIs), test YOUR code's logic
+- Avoid testing that mocks return setup values
+- Focus on tests that catch real regressions
 
-**Good First Issue:** Add basic tests for one command (e.g., GetStatusCommand) and set up CI workflow
+**Current Status:**
+- Tests run locally in Unity Editor (Window > General > Test Runner)
+- CI/CD deferred until licensing strategy determined
+- Goal: Match Python suite quality (22 tests, 95% coverage)
 
 ### Additional Improvements
 - **Performance benchmarks**: Measure command roundtrip time
