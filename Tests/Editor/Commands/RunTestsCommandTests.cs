@@ -374,7 +374,7 @@ namespace MXR.ClaudeBridge.Tests.Commands {
             public string ParentFullName { get; set; }
             public int ChildIndex { get; set; }
             public TestMode TestMode { get; set; }
-            public string Arguments { get; set; }
+            public object[] Arguments { get; set; }
         }
 
         private class MockTestResultAdaptor : ITestResultAdaptor {
