@@ -359,6 +359,7 @@ namespace MXR.ClaudeBridge.Tests.Commands {
             public bool HasChildren => Children != null && ((IEnumerable<ITestAdaptor>)Children).GetEnumerator().MoveNext();
             public bool IsSuite { get; set; }
             public IEnumerable<ITestAdaptor> Children { get; set; } = new List<ITestAdaptor>();
+            public ITestAdaptor Parent { get; set; }
             public int TestCaseTimeout { get; set; }
             public ITypeInfo TypeInfo { get; set; }
             public IMethodInfo Method { get; set; }
