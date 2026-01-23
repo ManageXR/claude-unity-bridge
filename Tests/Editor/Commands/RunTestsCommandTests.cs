@@ -1,6 +1,7 @@
 using MXR.ClaudeBridge.Commands;
 using MXR.ClaudeBridge.Models;
 using NUnit.Framework;
+using NUnit.Framework.Interfaces;
 using UnityEditor.TestTools.TestRunner.Api;
 using System.Reflection;
 using System.Collections.Generic;
@@ -357,8 +358,8 @@ namespace MXR.ClaudeBridge.Tests.Commands {
             public bool IsSuite { get; set; }
             public IEnumerable<ITestAdaptor> Children { get; set; } = new List<ITestAdaptor>();
             public int TestCaseTimeout { get; set; }
-            public object TypeInfo { get; set; }
-            public object Method { get; set; }
+            public ITypeInfo TypeInfo { get; set; }
+            public IMethodInfo Method { get; set; }
             public string[] Categories { get; set; }
             public bool IsTestAssembly { get; set; }
             public RunState RunState { get; set; }
