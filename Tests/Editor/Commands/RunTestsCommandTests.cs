@@ -371,8 +371,10 @@ namespace MXR.ClaudeBridge.Tests.Commands {
             public string ParentId { get; set; }
             public string UniqueName { get; set; }
             public string ParentUniqueName { get; set; }
+            public string ParentFullName { get; set; }
             public int ChildIndex { get; set; }
             public TestMode TestMode { get; set; }
+            public string Arguments { get; set; }
         }
 
         private class MockTestResultAdaptor : ITestResultAdaptor {
@@ -391,8 +393,9 @@ namespace MXR.ClaudeBridge.Tests.Commands {
             public IEnumerable<ITestResultAdaptor> Children { get; set; }
             public string Output { get; set; }
             public TestStatus TestStatus { get; set; }
-            public double StartTime { get; set; }
-            public double EndTime { get; set; }
+            public string ResultState { get; set; }
+            public System.DateTime StartTime { get; set; }
+            public System.DateTime EndTime { get; set; }
 
             public TNode ToXml() {
                 return null; // Not needed for testing
