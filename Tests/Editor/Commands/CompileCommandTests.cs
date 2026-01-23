@@ -2,6 +2,7 @@ using MXR.ClaudeBridge.Commands;
 using MXR.ClaudeBridge.Models;
 using NUnit.Framework;
 using UnityEditor.Compilation;
+using UnityEngine.TestTools;
 using System.Reflection;
 
 namespace MXR.ClaudeBridge.Tests.Commands {
@@ -65,6 +66,9 @@ namespace MXR.ClaudeBridge.Tests.Commands {
             // Arrange - Start async operation
             _command.Execute(Request, Responses.OnProgress, Responses.OnComplete);
 
+            // Expect error log from CompileCommand
+            LogAssert.Expect(UnityEngine.LogType.Error, "[ClaudeBridge] Compilation error: Test compilation error");
+
             // Simulate compilation errors
             var errorMessages = new CompilerMessage[] {
                 new CompilerMessage {
@@ -122,6 +126,10 @@ namespace MXR.ClaudeBridge.Tests.Commands {
         public void OnAssemblyCompilationFinished_WithMultipleErrors_StillFails() {
             // Arrange
             _command.Execute(Request, Responses.OnProgress, Responses.OnComplete);
+
+            // Expect error logs from CompileCommand (one per error)
+            LogAssert.Expect(UnityEngine.LogType.Error, "[ClaudeBridge] Compilation error: Error 1");
+            LogAssert.Expect(UnityEngine.LogType.Error, "[ClaudeBridge] Compilation error: Error 2");
 
             // Simulate multiple assemblies with errors
             var errorMessages1 = new CompilerMessage[] {
