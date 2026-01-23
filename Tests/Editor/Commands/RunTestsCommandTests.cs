@@ -6,6 +6,7 @@ using UnityEditor.TestTools.TestRunner.Api;
 using System.Reflection;
 using System.Collections.Generic;
 using TestStatus = UnityEditor.TestTools.TestRunner.Api.TestStatus;
+using RunState = UnityEditor.TestTools.TestRunner.Api.RunState;
 
 namespace MXR.ClaudeBridge.Tests.Commands {
     /// <summary>
