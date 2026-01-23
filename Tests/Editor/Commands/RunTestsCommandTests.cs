@@ -353,12 +353,12 @@ namespace MXR.ClaudeBridge.Tests.Commands {
             public string Name { get; set; }
             public string FullName { get; set; }
             public int TestCaseCount { get; set; }
-            public bool HasChildren => Children != null && Children.Count > 0;
+            public bool HasChildren => Children != null && ((IEnumerable<ITestAdaptor>)Children).GetEnumerator().MoveNext();
             public bool IsSuite { get; set; }
             public IEnumerable<ITestAdaptor> Children { get; set; } = new List<ITestAdaptor>();
             public int TestCaseTimeout { get; set; }
-            public ITypeInfo TypeInfo { get; set; }
-            public IMethodInfo Method { get; set; }
+            public object TypeInfo { get; set; }
+            public object Method { get; set; }
             public string[] Categories { get; set; }
             public bool IsTestAssembly { get; set; }
             public RunState RunState { get; set; }
