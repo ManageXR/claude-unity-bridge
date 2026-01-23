@@ -393,6 +393,10 @@ namespace MXR.ClaudeBridge.Tests.Commands {
             public TestStatus TestStatus { get; set; }
             public double StartTime { get; set; }
             public double EndTime { get; set; }
+
+            public TNode ToXml() {
+                return null; // Not needed for testing
+            }
         }
 
         #endregion
