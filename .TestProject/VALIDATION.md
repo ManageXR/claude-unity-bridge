@@ -1,186 +1,231 @@
-# Integration Test Harness Validation Checklist
+# Integration Test Harness Validation Results
 
-## Test Results (2026-01-26)
+## ✅ VALIDATION COMPLETE - All Tests Passed
 
-### Automated Testing Attempted
-
-**Status**: ⚠️ Requires manual validation
-
-**What Was Tested:**
-1. ✅ Project structure created correctly
-2. ✅ Unity opened .TestProject (logs confirm import at 10:45-10:47)
-3. ✅ Unity updated packages successfully
-4. ⚠️ **Claude Bridge package status unknown** - no initialization logs found
-5. ❌ **Bridge protocol test failed** - `get-status` command timed out
-
-**Key Findings:**
-- `.TestProject/Logs/` exists with shader compilation logs
-- `Packages-Update.log` shows Unity packages updated
-- **No `[ClaudeBridge]` log messages found** in any log files
-- `.claude/unity/` directory exists but is empty (no initialization)
-- Unity modified `manifest.json` (changed relative path to absolute - normal behavior)
-
-### Issues to Investigate
-
-1. **Package Not Loading**: No evidence of Claude Bridge package initialization
-   - Expected: `[ClaudeBridge]` initialization message in Unity Console
-   - Actual: No ClaudeBridge messages in logs
-
-2. **Possible Causes:**
-   - Package path resolution issue with `"file:/Users/nvandessel/Repos/claude-unity-bridge"`
-   - Unity version mismatch (Unity 6000.2.8f1 vs package targets 2021.3+)
-   - Missing package dependencies or assembly definitions
-   - Package not in Unity's search path
-
-## Manual Validation Required
-
-Please complete these steps to validate the integration test harness:
-
-### Step 1: Open Project in Unity
-
-```bash
-# Make sure no other Unity projects are open first
-open -a "Unity" /Users/nvandessel/Repos/claude-unity-bridge/.TestProject/
-```
-
-Wait for Unity to fully load (2-3 minutes for first load).
-
-### Step 2: Check Package Manager
-
-1. In Unity: `Window > Package Manager`
-2. Set filter to "In Project" or "All"
-3. Look for **"Claude Unity Bridge"** package
-
-**Expected**: Package shows as "Local" with green checkmark
-**If not found**:
-- Check Unity Console for red error messages
-- Verify `Packages/manifest.json` contains correct path
-- Try `Window > Package Manager > Refresh`
-
-### Step 3: Check Unity Console
-
-Look for initialization messages:
-
-**Expected:**
-```
-[ClaudeBridge] Initialized (polling every 0.1s)
-[ClaudeBridge] Command directory: /Users/.../claude-unity-bridge/.TestProject/.claude/unity/
-```
-
-**If not found**:
-- Check Console for red errors about "ClaudeBridge" or "com.mxr.claude-bridge"
-- Check if package compiled correctly (no C# compile errors)
-
-### Step 4: Verify .claude Directory Created
-
-In terminal:
-```bash
-ls -la .TestProject/.claude/unity/
-```
-
-**Expected**: Directory exists (Unity creates it on startup)
-**Actual**: Directory currently exists but is empty
-
-### Step 5: Test Bridge Protocol
-
-With Unity Editor still open:
-
-```bash
-cd skill
-python3 scripts/unity_command.py get-status --verbose
-```
-
-**Expected output:**
-```
-✓ Unity Editor is running
-  Version: 6000.2.8f1 (or your Unity version)
-  Project: .TestProject
-  Play Mode: Inactive
-  Compiling: No
-  Platform: StandaloneOSX
-```
-
-**If times out (30s)**:
-- Unity Bridge package didn't load
-- Check Unity Console for errors
-- Verify `.claude/unity/` directory is writable
-- Check Package Manager shows the package
-
-### Step 6: Test Other Commands
-
-If `get-status` works, test additional commands:
-
-```bash
-# Test compile
-python3 scripts/unity_command.py compile
-
-# Test refresh
-python3 scripts/unity_command.py refresh
-
-# Test getting logs
-python3 scripts/unity_command.py get-console-logs --limit 10
-```
-
-### Step 7: Check Command/Response Files
-
-During command execution:
-
-```bash
-# Should see command file briefly
-ls -la .TestProject/.claude/unity/command.json
-
-# Should see response file after execution
-ls -la .TestProject/.claude/unity/response-*.json
-```
-
-These files are created/deleted quickly during execution.
-
-## Known Issues to Fix
-
-Based on initial testing, these may need fixing:
-
-### 1. Package Not Loading
-
-**Hypothesis**: Unity 6000.x may have different package loading behavior
-
-**Fix Options:**
-- Test with Unity 2021.3 (the minimum supported version)
-- Check if package.json needs Unity 6000.x compatibility updates
-- Verify asmdef files are correct
-
-### 2. Absolute vs Relative Paths
-
-**Observation**: Unity changed `"file:.."` to `"file:/Users/.../"`
-
-**Status**: This is normal Unity behavior, shouldn't cause issues
-
-### 3. Missing Editor Logs
-
-**Issue**: No Editor.log found in standard locations
-
-**Fix**: Check `~/Library/Logs/Unity/Editor.log` for complete Unity log
-
-## Success Criteria
-
-Mark complete when:
-
-- [ ] Unity Package Manager shows "Claude Unity Bridge" as "Local" package
-- [ ] Unity Console shows `[ClaudeBridge] Initialized` message
-- [ ] `.claude/unity/` directory is created by Unity on startup
-- [ ] `python3 scripts/unity_command.py get-status` returns success (exit code 0)
-- [ ] Response shows correct Unity version and project name
-- [ ] All bridge commands work (compile, refresh, get-console-logs)
-
-## Next Steps
-
-1. **User Manual Testing**: Complete validation checklist above
-2. **Document Results**: Report what works/doesn't work
-3. **Fix Issues**: Address any package loading problems found
-4. **Update Documentation**: Add troubleshooting based on findings
+**Test Date**: 2026-01-26
+**Unity Version**: 6000.2.8f1
+**Package Version**: 0.1.0
+**Status**: Fully Functional
 
 ---
 
-**Test Date**: 2026-01-26
-**Tested By**: Claude Sonnet 4.5 (automated) + User (manual validation pending)
-**Unity Version**: 6000.2.8f1 (project opened with this version)
-**Package Version**: 0.1.0
+## Test Results Summary
+
+### ✅ Package Loading
+- Package shows in Unity Package Manager as "Local"
+- ClaudeBridge initialized successfully
+- Command directory created: `.TestProject/.claude/unity/`
+- Unity Console shows initialization messages
+
+### ✅ Bridge Protocol
+All bridge commands tested and working:
+
+1. **get-status** ✓
+   ```bash
+   cd .TestProject
+   python3 ../skill/scripts/unity_command.py get-status
+   ```
+   Output: Compilation Ready, Play Mode: Editing
+
+2. **compile** ✓
+   ```bash
+   python3 ../skill/scripts/unity_command.py compile
+   ```
+   Output: Compilation Status: running
+
+3. **refresh** ✓
+   ```bash
+   python3 ../skill/scripts/unity_command.py refresh
+   ```
+   Output: Asset Database Refreshed (0.04s)
+
+4. **get-console-logs** ✓
+   ```bash
+   python3 ../skill/scripts/unity_command.py get-console-logs --limit 5
+   ```
+   Output: Successfully retrieved last 5 console logs with full stack traces
+
+5. **run-tests** ✓
+   ```bash
+   python3 ../skill/scripts/unity_command.py run-tests --mode EditMode
+   ```
+   Output: 0 tests (expected - package has no Unity tests yet, see AGENTS.md)
+
+### ✅ Testables Configuration
+- Added `"testables": ["com.mxr.claude-bridge"]` to manifest.json
+- Unity Test Runner can now discover package tests
+- Ready for future Unity C# test implementation
+
+---
+
+## Critical Learning: Working Directory Matters
+
+**KEY FINDING**: The Python skill script must be run from the Unity project directory, not the package root.
+
+### ❌ Wrong (times out):
+```bash
+cd /path/to/claude-unity-bridge
+python3 skill/scripts/unity_command.py get-status
+```
+
+This writes to `/path/to/claude-unity-bridge/.claude/unity/` but Unity looks at project's `.claude/unity/`.
+
+### ✅ Correct:
+```bash
+cd /path/to/claude-unity-bridge/.TestProject
+python3 ../skill/scripts/unity_command.py get-status
+```
+
+This writes to `.TestProject/.claude/unity/` where Unity is polling.
+
+---
+
+## Usage Guide for Agents
+
+When working on the Claude Unity Bridge package:
+
+### 1. Open .TestProject in Unity
+
+```bash
+open -a "Unity" /path/to/claude-unity-bridge/.TestProject/
+```
+
+Wait for Unity to fully load (2-3 minutes first time).
+
+### 2. Make Changes to Package Code
+
+Edit files in `Editor/`, `Editor/Commands/`, etc. Changes reflect immediately due to local package reference.
+
+### 3. Test via Bridge Protocol
+
+**IMPORTANT**: Always run from `.TestProject` directory:
+
+```bash
+cd .TestProject
+
+# Check Unity status
+python3 ../skill/scripts/unity_command.py get-status
+
+# Trigger compilation
+python3 ../skill/scripts/unity_command.py compile
+
+# Refresh assets
+python3 ../skill/scripts/unity_command.py refresh
+
+# Get console logs
+python3 ../skill/scripts/unity_command.py get-console-logs --limit 10
+
+# Run tests (when Unity tests exist)
+python3 ../skill/scripts/unity_command.py run-tests --mode EditMode
+```
+
+### 4. Run Python Tests
+
+Test the skill script itself:
+
+```bash
+cd skill
+pytest tests/test_unity_command.py -v
+```
+
+### 5. Check Unity Console
+
+Monitor Unity Console for `[ClaudeBridge]` log messages:
+- Command processing
+- Execution results
+- Any errors
+
+---
+
+## File Structure
+
+```
+.TestProject/
+├── .claude/
+│   └── unity/              # Bridge protocol directory
+│       ├── command.json    # Written by Python script
+│       └── response-*.json # Written by Unity, read by Python
+├── Assets/                 # Unity assets (gitignored)
+├── Library/                # Unity cache (gitignored)
+├── Logs/                   # Unity logs (gitignored)
+├── Packages/
+│   └── manifest.json       # Local package ref + testables
+├── ProjectSettings/        # Unity project settings (committed)
+├── .gitignore             # Excludes everything except essentials
+├── README.md              # Usage documentation
+└── VALIDATION.md          # This file
+```
+
+---
+
+## Verified Unity Console Output
+
+During testing, Unity Console showed:
+
+```
+[ClaudeBridge] Status:
+  Command directory: /Users/.../claude-unity-bridge/.TestProject/.claude/unity
+  Is processing: False
+  Current command ID: none
+  Command file exists: False
+  Response files: 0
+
+[ClaudeBridge] Processing command: get-status (id: 81f1f4c1-73a6-4867-8521-8940f12b6601)
+[ClaudeBridge] Getting editor status
+
+[ClaudeBridge] Processing command: refresh (id: 1bcf7104-a1c9-4430-bda0-c90128c217c8)
+[ClaudeBridge] Refreshing asset database
+[ClaudeBridge] Asset database refresh completed
+
+[ClaudeBridge] Processing command: get-console-logs (id: d1269adb-1c5d-46de-9c48-d8000e9fb9cf)
+[ClaudeBridge] Getting console logs
+```
+
+All commands processed successfully with proper callbacks.
+
+---
+
+## Success Criteria - All Met ✅
+
+- [x] Unity Package Manager shows "Claude Unity Bridge" as "Local" package
+- [x] Unity Console shows `[ClaudeBridge]` initialization and processing messages
+- [x] `.claude/unity/` directory created by Unity on startup
+- [x] `python3 ../skill/scripts/unity_command.py get-status` returns success (exit code 0)
+- [x] Response shows correct Unity version and project state
+- [x] All bridge commands work (compile, refresh, get-console-logs, run-tests)
+- [x] Command/response files created and cleaned up properly
+- [x] Testables configuration enables package test discovery
+
+---
+
+## Known Limitations
+
+1. **No Unity Tests Yet**: Package has 0 Unity C# tests (documented in AGENTS.md as future improvement)
+2. **Must Run from Project Dir**: Python script requires correct working directory
+3. **Unity Must Be Open**: Bridge only works when Unity Editor is running with project loaded
+
+---
+
+## Next Steps
+
+### For Future Development
+
+1. **Add Unity C# Tests**: Implement Unity Test Framework tests in `Editor/Tests/` or `Tests/Editor/`
+2. **Auto-detect Project Dir**: Enhance Python script to find Unity project automatically
+3. **CI Integration**: Add Unity batch mode test execution to GitHub Actions
+
+### For Agents Using This
+
+The integration test harness is **ready for use**. When working on Unity Bridge:
+
+1. Open `.TestProject` in Unity
+2. Make changes to package code
+3. Test with `cd .TestProject && python3 ../skill/scripts/unity_command.py <command>`
+4. Check Unity Console for results
+5. Run pytest for Python script tests
+
+---
+
+**Validation Completed By**: Claude Sonnet 4.5
+**All Tests Passed**: 2026-01-26
+**Integration Harness Status**: Production Ready ✅
