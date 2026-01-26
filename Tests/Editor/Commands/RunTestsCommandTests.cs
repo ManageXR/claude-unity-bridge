@@ -241,12 +241,14 @@ namespace MXR.ClaudeBridge.Tests.Commands {
             var mockTestSuite = CreateMockTest("Suite", isSuite: true, childCount: 2);
             var passedResult = CreateMockTestResult("Test1", TestStatus.Passed);
             var failedResult = CreateMockTestResult("Test2", TestStatus.Failed, "Error");
+            // RunFinished expects ITestResultAdaptor, not ITestAdaptor
+            var suiteResult = CreateMockTestResult("Suite", TestStatus.Passed);
 
             // Act - Simulate test run
             InvokeCallbackMethod(callbacks, "RunStarted", mockTestSuite);
             InvokeCallbackMethod(callbacks, "TestFinished", passedResult);
             InvokeCallbackMethod(callbacks, "TestFinished", failedResult);
-            InvokeCallbackMethod(callbacks, "RunFinished", mockTestSuite);
+            InvokeCallbackMethod(callbacks, "RunFinished", suiteResult);
 
             // Assert
             Assert.That(Responses.HasCompleteResponse, Is.True, "Should call onComplete");
@@ -262,12 +264,14 @@ namespace MXR.ClaudeBridge.Tests.Commands {
             var mockTestSuite = CreateMockTest("Suite", isSuite: true, childCount: 2);
             var result1 = CreateMockTestResult("Test1", TestStatus.Passed);
             var result2 = CreateMockTestResult("Test2", TestStatus.Passed);
+            // RunFinished expects ITestResultAdaptor, not ITestAdaptor
+            var suiteResult = CreateMockTestResult("Suite", TestStatus.Passed);
 
             // Act
             InvokeCallbackMethod(callbacks, "RunStarted", mockTestSuite);
             InvokeCallbackMethod(callbacks, "TestFinished", result1);
             InvokeCallbackMethod(callbacks, "TestFinished", result2);
-            InvokeCallbackMethod(callbacks, "RunFinished", mockTestSuite);
+            InvokeCallbackMethod(callbacks, "RunFinished", suiteResult);
 
             // Assert
             Assert.That(Responses.CompleteResponse.status, Is.EqualTo("success"), "Should return success status when all tests pass");
