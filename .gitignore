@@ -1,2 +1,8 @@
 # bv (beads viewer) local config and caches
 .bv/
+
+# Unity-generated .meta files (only relevant inside .TestProject, not in repo root)
+*.meta
+
+# macOS
+.DS_Store

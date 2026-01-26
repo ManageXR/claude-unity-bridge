@@ -1,0 +1,19 @@
+# Exclude development and testing directories from package distribution
+.TestProject/
+.beads/
+.bv/
+.claude/
+skill/
+
+# Exclude CI/CD
+.github/
+
+# Exclude development documentation (keep only user-facing docs)
+AGENTS.md
+CLAUDE.md
+.beads/
+
+# Git files
+.git/
+.gitignore
+.gitattributes

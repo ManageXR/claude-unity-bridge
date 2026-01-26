@@ -5,10 +5,14 @@
 !.gitignore
 !README.md
 
-# Keep ProjectSettings directory (but not user-specific files)
+# Keep ProjectSettings directory
 !ProjectSettings/
-!ProjectSettings/*
+!ProjectSettings/*.txt
+!ProjectSettings/*.asset
+
+# But exclude user-specific settings
 ProjectSettings/ProjectSettings.asset
+ProjectSettings/*.meta
 
 # Keep Packages directory for manifest
 !Packages/

@@ -2,9 +2,11 @@
 
 This is a minimal Unity 2021.3+ project used for end-to-end integration testing of the Claude Unity Bridge package.
 
+**Note**: This directory is named `.TestProject` (hidden) to prevent it from appearing in the Package Manager when users install this package. It's excluded via `.npmignore` and only used for local development and testing.
+
 ## Purpose
 
-The `TestProject/` directory enables:
+The `.TestProject/` directory enables:
 
 1. **Package Development** - Test Unity Bridge changes in a real Unity project
 2. **End-to-End Validation** - Verify the bridge protocol works correctly
@@ -14,7 +16,7 @@ The `TestProject/` directory enables:
 ## Structure
 
 ```
-TestProject/
+.TestProject/
 ├── Assets/               # Unity assets (gitignored, created by Unity)
 ├── Packages/             # Package dependencies
 │   └── manifest.json    # References parent directory as local package
@@ -48,10 +50,10 @@ This means:
 
 ```bash
 # From repository root
-open -a "Unity" TestProject/
+open -a "Unity" .TestProject/
 ```
 
-Or open via Unity Hub by adding `TestProject/` as a project.
+Or open via Unity Hub by adding `.TestProject/` as a project.
 
 **Important**: You must have Unity 2021.3 or later installed.
 
@@ -66,7 +68,7 @@ Once Unity Editor opens:
 
 ### 3. Test the Bridge Protocol
 
-With Unity Editor open and the TestProject loaded, test the Python skill script:
+With Unity Editor open and the .TestProject loaded, test the Python skill script:
 
 ```bash
 # From repository root
@@ -78,7 +80,7 @@ python3 scripts/unity_command.py get-status
 ```
 ✓ Unity Editor is running
   Version: 2021.3.x
-  Project: TestProject
+  Project: .TestProject
   Play Mode: Inactive
   Compiling: No
   Platform: StandaloneOSX
@@ -109,7 +111,7 @@ python3 scripts/unity_command.py run-tests --mode EditMode
 **Cause**: The `.claude/unity/` directory doesn't exist yet.
 
 **Fix**:
-1. Ensure Unity Editor is open with TestProject loaded
+1. Ensure Unity Editor is open with .TestProject loaded
 2. The package should create `.claude/unity/` automatically on startup
 3. Check Unity Console for any `[ClaudeBridge]` errors
 4. Try reopening the project if the directory isn't created
@@ -138,7 +140,7 @@ python3 scripts/unity_command.py run-tests --mode EditMode
 
 When working on the Claude Unity Bridge package:
 
-1. **Before Testing Changes**: Open TestProject in Unity Editor
+1. **Before Testing Changes**: Open .TestProject in Unity Editor
 2. **Make Changes**: Edit files in `../Editor/` (changes reflect immediately)
 3. **Validate**: Run Python commands from `skill/` directory
 4. **Check Logs**: Monitor Unity Console for `[ClaudeBridge]` messages
@@ -147,8 +149,8 @@ When working on the Claude Unity Bridge package:
 ### Typical Workflow
 
 ```bash
-# 1. Open Unity with TestProject (in separate terminal or GUI)
-open -a "Unity" TestProject/
+# 1. Open Unity with .TestProject (in separate terminal or GUI)
+open -a "Unity" .TestProject/
 
 # 2. Make changes to package C# code
 # Edit files in Editor/Commands/, Editor/ClaudeBridge.cs, etc.
@@ -186,7 +188,7 @@ If you need to add test scenes, scripts, or assets for testing:
 For example, to add a test scene:
 
 ```gitignore
-# In TestProject/.gitignore, add:
+# In .TestProject/.gitignore, add:
 !Assets/
 !Assets/Scenes/
 !Assets/Scenes/TestScene.unity
@@ -213,7 +215,7 @@ To use a different Unity version:
 
 ```bash
 # Open project
-open -a "Unity" TestProject/
+open -a "Unity" .TestProject/
 
 # Test bridge
 cd skill && python3 scripts/unity_command.py get-status
