@@ -112,7 +112,7 @@ git commit -m "test: Add tests and CI"
 ### Unity Package Tests
 - **Framework**: Unity Test Framework (NUnit)
 - **Location**: `Tests/Editor/`
-- **Current Coverage**: GetStatusCommand (8 tests, Phase 1 complete)
+- **Current Coverage**: All commands tested (~67 tests, Phases 1-4 complete)
 - **Run Tests**: Open Unity Editor → Window > General > Test Runner → EditMode → Run All
 - **Testing Philosophy**: Test real behavior, not mocks (see implementation plan)
   - Mock dependencies (file system, Unity APIs), test YOUR logic's response
@@ -124,9 +124,9 @@ git commit -m "test: Add tests and CI"
   - `Tests/Editor/TestHelpers/ResponseCapture.cs` - Utility to capture callbacks
 - **Phased Rollout** (matching Python suite quality - 22 tests, 95% coverage):
   - ✅ Phase 1: Foundation + GetStatusCommand (8 tests) - COMPLETE
-  - ⏳ Phase 2: RefreshCommand + model tests (~17 tests)
-  - ⏳ Phase 3: CompileCommand async tests (~9 tests)
-  - ⏳ Phase 4: RunTestsCommand + GetConsoleLogsCommand (~33 tests)
+  - ✅ Phase 2: RefreshCommand (7 tests) + model tests (11 tests) - COMPLETE
+  - ✅ Phase 3: CompileCommand async tests (9 tests) - COMPLETE
+  - ✅ Phase 4: RunTestsCommand (17 tests) + GetConsoleLogsCommand (16 tests) - COMPLETE
   - ⏳ Phase 5: ClaudeBridge dispatcher tests (~15 tests)
   - ⏳ Phase 6: CI/CD integration (deferred - licensing discussion needed)
 
@@ -496,19 +496,22 @@ test: Add pytest tests for scene validation
 
 ## Future Improvements / Known Gaps
 
-### Unity C# Testing (In Progress - Phase 1 Complete)
-The Unity package now has test infrastructure established:
+### Unity C# Testing (Phases 1-4 Complete)
+The Unity package now has comprehensive test coverage:
 
-**Phase 1 Complete (Foundation):**
-- ✅ Test assembly definition with NUnit framework
-- ✅ Base test fixtures (`CommandTestFixture`, `ResponseCapture`)
-- ✅ GetStatusCommand tests (8 tests covering response construction, callback contracts, JSON serialization)
-- ✅ Local testing workflow via Unity Test Runner
+**Completed Phases:**
+- ✅ Phase 1: Foundation + GetStatusCommand (8 tests)
+- ✅ Phase 2: RefreshCommand (7 tests) + CommandRequest/CommandResponse serialization (11 tests)
+- ✅ Phase 3: CompileCommand async/event-driven tests (9 tests)
+- ✅ Phase 4: RunTestsCommand (17 tests) + GetConsoleLogsCommand (16 tests)
+
+**Test Infrastructure:**
+- Test assembly definition with NUnit framework
+- Base test fixtures (`CommandTestFixture`, `ResponseCapture`)
+- Reflection-based testing for internal callbacks
+- Mock implementations for Unity Test Runner APIs
 
 **Remaining Phases:**
-- Phase 2: RefreshCommand + model serialization tests
-- Phase 3: CompileCommand async/event-driven tests
-- Phase 4: RunTestsCommand + GetConsoleLogsCommand complex tests
 - Phase 5: ClaudeBridge dispatcher with file system mocking
 - Phase 6: CI/CD integration (requires Unity license strategy discussion)
 
