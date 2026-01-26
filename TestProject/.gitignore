@@ -1,0 +1,18 @@
+# Ignore everything by default
+*
+
+# Except these:
+!.gitignore
+!README.md
+
+# Keep ProjectSettings directory (but not user-specific files)
+!ProjectSettings/
+!ProjectSettings/*
+ProjectSettings/ProjectSettings.asset
+
+# Keep Packages directory for manifest
+!Packages/
+!Packages/manifest.json
+
+# .claude/ is created at runtime by Unity Bridge - always ignore
+.claude/
