@@ -3,14 +3,8 @@ name: Test Unity Bridge Skill
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'skill/**'
-      - '.github/workflows/test-skill.yml'
   pull_request:
     branches: [ main ]
-    paths:
-      - 'skill/**'
-      - '.github/workflows/test-skill.yml'
 
 jobs:
   test:

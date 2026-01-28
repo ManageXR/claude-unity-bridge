@@ -23,7 +23,7 @@ File-based bridge enabling Claude Code to trigger Unity Editor operations in a r
 2. Go to `Window > Package Manager`
 3. Click the `+` button in the top-left corner
 4. Select `Add package from git URL...`
-5. Enter: `https://github.com/ManageXR/claude-unity-bridge.git`
+5. Enter: `https://github.com/ManageXR/claude-unity-bridge.git?path=package`
 6. Click `Add`
 
 ### Via Package Manager (Local Path)
@@ -35,7 +35,7 @@ For development or testing:
 3. Go to `Window > Package Manager`
 4. Click the `+` button in the top-left corner
 5. Select `Add package from disk...`
-6. Navigate to the cloned repository and select `package.json`
+6. Navigate to the `package/` folder and select `package.json`
 7. Click `Open`
 
 ### Via manifest.json
@@ -45,7 +45,7 @@ Add this line to your project's `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.managexr.claude-bridge": "https://github.com/ManageXR/claude-unity-bridge.git"
+    "com.managexr.claude-bridge": "https://github.com/ManageXR/claude-unity-bridge.git?path=package"
   }
 }
 ```
@@ -228,19 +228,26 @@ Each Unity project maintains its own command/response directory at `.claude/unit
 ### File Structure
 
 ```
-Editor/
-├── ClaudeBridge.cs          # Main coordinator
-├── ClaudeBridge.asmdef      # Assembly definition
-├── Commands/
-│   ├── ICommand.cs          # Command interface
-│   ├── RunTestsCommand.cs   # Test execution
-│   ├── CompileCommand.cs    # Script compilation
-│   ├── RefreshCommand.cs    # Asset refresh
-│   ├── GetStatusCommand.cs  # Editor status
-│   └── GetConsoleLogsCommand.cs  # Console logs
-└── Models/
-    ├── CommandRequest.cs    # Request DTO
-    └── CommandResponse.cs   # Response DTO
+package/                     # Unity package (UPM)
+├── Editor/
+│   ├── ClaudeBridge.cs          # Main coordinator
+│   ├── ClaudeBridge.asmdef      # Assembly definition
+│   ├── Commands/
+│   │   ├── ICommand.cs          # Command interface
+│   │   ├── RunTestsCommand.cs   # Test execution
+│   │   ├── CompileCommand.cs    # Script compilation
+│   │   ├── RefreshCommand.cs    # Asset refresh
+│   │   ├── GetStatusCommand.cs  # Editor status
+│   │   └── GetConsoleLogsCommand.cs  # Console logs
+│   └── Models/
+│       ├── CommandRequest.cs    # Request DTO
+│       └── CommandResponse.cs   # Response DTO
+└── Tests/                   # Unity tests
+
+skill/                       # Claude Code skill (Python)
+├── scripts/
+│   └── unity_command.py     # Deterministic command script
+└── SKILL.md                 # Skill documentation
 ```
 
 ### Command Pattern
