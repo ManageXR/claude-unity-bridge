@@ -1,0 +1,4 @@
+name: claude-unity-bridge
+lairs:
+  - orccy  # Warchief's club (permanent)
+  # Task lairs created on-demand via create_lair or summon_minion

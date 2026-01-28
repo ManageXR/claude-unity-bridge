@@ -6,3 +6,6 @@
 
 # macOS
 .DS_Store
+
+# orc-swarm lairs (worktrees)
+lairs/

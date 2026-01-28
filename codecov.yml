@@ -28,7 +28,3 @@ flags:
     paths:
       - skill/scripts/
     carryforward: true
-  unity-editor:
-    paths:
-      - Editor/
-    carryforward: true
