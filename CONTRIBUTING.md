@@ -29,16 +29,21 @@ Welcome! We appreciate your interest in contributing to the Claude Unity Bridge.
 
 All contributions must pass existing tests. Before submitting a PR:
 
-### Python Skill Tests
+### Python Skill Tests (CI)
 ```bash
 cd skill
 pytest tests/ -v
 ```
+These run automatically in CI on all PRs.
 
-### Unity Tests
+### Unity Tests (Local Only)
+Due to Unity's licensing constraints, C# tests must be run locally:
+
 1. Open the project in Unity 2021.3+
 2. Open Window > General > Test Runner
-3. Run all tests in Edit Mode and Play Mode
+3. Run all EditMode tests
+
+Please confirm tests pass before submitting PRs that modify `Editor/` or `Tests/`.
 
 ## Code Style
 
