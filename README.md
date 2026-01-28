@@ -1,5 +1,10 @@
 # Claude Unity Bridge
 
+![CI](https://github.com/ManageXR/claude-unity-bridge/actions/workflows/test-skill.yml/badge.svg)
+[![codecov](https://codecov.io/gh/ManageXR/claude-unity-bridge/graph/badge.svg)](https://codecov.io/gh/ManageXR/claude-unity-bridge)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Unity 2021.3+](https://img.shields.io/badge/Unity-2021.3%2B-black.svg)
+
 File-based bridge enabling Claude Code to trigger Unity Editor operations in a running editor instance.
 
 ## Features
