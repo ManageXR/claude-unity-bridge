@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "com.mxr.claude-bridge": "file:/Users/nvandessel/Repos/claude-unity-bridge",
+    "com.mxr.claude-bridge": "file:../../package",
     "com.unity.ai.navigation": "2.0.9",
     "com.unity.collab-proxy": "2.9.3",
     "com.unity.ide.rider": "3.0.38",
