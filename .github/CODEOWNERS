@@ -1,0 +1,12 @@
+# Default owners for everything
+* @ManageXR/home-screen
+
+# Unity package code
+/Editor/ @ManageXR/home-screen
+/Tests/ @ManageXR/home-screen
+
+# Python skill
+/skill/ @ManageXR/home-screen
+
+# CI/CD
+/.github/ @ManageXR/home-screen
