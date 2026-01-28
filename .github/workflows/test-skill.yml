@@ -36,7 +36,17 @@ jobs:
     - name: Run tests
       run: |
         cd skill
-        pytest tests/test_unity_command.py -v --cov=scripts --cov-report=term-missing
+        pytest tests/test_unity_command.py -v --cov=scripts --cov-report=term-missing --cov-report=xml
+
+    - name: Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+      uses: codecov/codecov-action@v4
+      with:
+        files: skill/coverage.xml
+        flags: python-skill
+        name: python-skill-coverage
+        fail_ci_if_error: false
+        verbose: true
 
     - name: Test script help
       run: |
