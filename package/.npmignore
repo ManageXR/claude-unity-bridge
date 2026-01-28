@@ -1,0 +1,4 @@
+# Exclude from UPM package distribution
+Tests/
+Documentation~/
+CHANGELOG.md
