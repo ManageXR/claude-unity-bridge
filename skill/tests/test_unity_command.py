@@ -7,6 +7,7 @@ Run with: pytest skill/tests/test_unity_command.py
 import json
 import sys
 import tempfile
+import time
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
@@ -22,13 +23,20 @@ from unity_command import (
     format_console_logs,
     format_editor_status,
     format_refresh_results,
+    format_generic_response,
     write_command,
     wait_for_response,
     cleanup_old_responses,
+    cleanup_response_file,
+    execute_command,
+    main,
     UnityCommandError,
     CommandTimeoutError,
     UnityNotRunningError,
-    UNITY_DIR
+    UNITY_DIR,
+    EXIT_SUCCESS,
+    EXIT_ERROR,
+    EXIT_TIMEOUT
 )
 
 
@@ -383,6 +391,454 @@ class TestIntegration:
             # Verify
             assert "Unity Editor Status:" in formatted
             assert "✓ Ready" in formatted
+
+
+class TestFormatGenericResponse:
+    """Test generic response formatting"""
+
+    def test_generic_success(self):
+        response = {"action": "custom-action", "status": "success"}
+        result = format_generic_response(response, "success", 1.5)
+
+        assert "✓ custom-action completed successfully" in result
+        assert "Duration: 1.50s" in result
+
+    def test_generic_failure(self):
+        response = {"action": "custom-action", "status": "failure", "error": "Something broke"}
+        result = format_generic_response(response, "failure", 0.5)
+
+        assert "✗ custom-action failed: Something broke" in result
+
+    def test_generic_unknown_status(self):
+        response = {"action": "custom-action", "status": "pending"}
+        result = format_generic_response(response, "pending", 0.1)
+
+        assert "custom-action status: pending" in result
+
+
+class TestFormatResponseBranches:
+    """Test format_response routing to different formatters"""
+
+    def test_format_compile(self):
+        response = {"status": "success", "duration_ms": 1000}
+        result = format_response(response, "compile")
+        assert "Compilation Successful" in result
+
+    def test_format_get_console_logs(self):
+        response = {"consoleLogs": []}
+        result = format_response(response, "get-console-logs")
+        assert "No console logs found" in result
+
+    def test_format_refresh(self):
+        response = {"status": "success", "duration_ms": 500}
+        result = format_response(response, "refresh")
+        assert "Asset Database Refreshed" in result
+
+    def test_format_unknown_action(self):
+        response = {"action": "unknown-action", "status": "success", "duration_ms": 100}
+        result = format_response(response, "unknown-action")
+        assert "completed successfully" in result
+
+
+class TestFormatCompileEdgeCases:
+    """Test compile formatting edge cases"""
+
+    def test_compile_failure_no_error(self):
+        response = {"status": "failure"}
+        result = format_compile_results(response, "failure", 1.0)
+        assert "✗ Compilation Failed" in result
+        assert "Duration: 1.00s" in result
+
+    def test_compile_unknown_status(self):
+        response = {"status": "running"}
+        result = format_compile_results(response, "running", 0.5)
+        assert "Compilation Status: running" in result
+
+
+class TestFormatRefreshEdgeCases:
+    """Test refresh formatting edge cases"""
+
+    def test_refresh_unknown_status(self):
+        response = {"status": "running"}
+        result = format_refresh_results(response, "running", 0.3)
+        assert "Refresh Status: running" in result
+
+
+class TestFormatEditorStatusEdgeCases:
+    """Test editor status formatting edge cases"""
+
+    def test_editor_updating(self):
+        response = {
+            "error": json.dumps({
+                "isCompiling": False,
+                "isUpdating": True,
+                "isPlaying": False,
+                "isPaused": False
+            })
+        }
+        result = format_editor_status(response)
+        assert "⏳ Yes" in result
+
+    def test_editor_invalid_json(self):
+        response = {"error": "not valid json"}
+        result = format_editor_status(response)
+        assert "Unity Editor Status: not valid json" in result
+
+
+class TestFormatConsoleLogsEdgeCases:
+    """Test console logs formatting edge cases"""
+
+    def test_console_logs_with_warning(self):
+        response = {
+            "consoleLogs": [
+                {
+                    "message": "Deprecated API usage",
+                    "stackTrace": "",
+                    "type": "Warning",
+                    "count": 1
+                }
+            ]
+        }
+        result = format_console_logs(response)
+        assert "[Warning]" in result
+
+    def test_console_logs_with_filter(self):
+        response = {
+            "consoleLogs": [{"message": "test", "type": "Error", "stackTrace": "", "count": 1}],
+            "params": {"filter": "Error"}
+        }
+        result = format_console_logs(response)
+        assert "filtered by Error" in result
+
+
+class TestCleanupResponseFile:
+    """Test cleanup_response_file function"""
+
+    def test_cleanup_existing_file(self, tmp_path):
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            command_id = "test-cleanup-123"
+            response_file = tmp_path / f"response-{command_id}.json"
+            response_file.write_text('{"id": "test"}')
+
+            cleanup_response_file(command_id)
+            assert not response_file.exists()
+
+    def test_cleanup_nonexistent_file(self, tmp_path):
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            # Should not raise error
+            cleanup_response_file("nonexistent-id")
+
+    def test_cleanup_with_verbose(self, tmp_path, capsys):
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            command_id = "test-verbose-123"
+            response_file = tmp_path / f"response-{command_id}.json"
+            response_file.write_text('{"id": "test"}')
+
+            cleanup_response_file(command_id, verbose=True)
+
+            captured = capsys.readouterr()
+            assert "Cleaned up response file" in captured.err
+
+
+class TestCleanupOldResponsesVerbose:
+    """Test cleanup_old_responses verbose mode"""
+
+    def test_cleanup_verbose_output(self, tmp_path, capsys):
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            old_file = tmp_path / "response-old-verbose.json"
+            old_file.write_text('{"id": "old"}')
+
+            import os
+            old_time = time.time() - 7200
+            os.utime(old_file, (old_time, old_time))
+
+            cleanup_old_responses(max_age_hours=1, verbose=True)
+
+            captured = capsys.readouterr()
+            assert "Cleaned up" in captured.err
+
+
+class TestWriteCommandErrors:
+    """Test error handling in write_command"""
+
+    def test_write_command_mkdir_failure(self, tmp_path):
+        # Create a file where the directory should be to cause mkdir to fail
+        blocking_file = tmp_path / "blocking"
+        blocking_file.write_text("blocking")
+        unity_dir = blocking_file / "unity"
+
+        with patch('unity_command.UNITY_DIR', unity_dir):
+            with pytest.raises(UnityCommandError) as exc_info:
+                write_command("test", {})
+            assert "Failed to create Unity directory" in str(exc_info.value)
+
+    def test_write_command_file_write_failure(self, tmp_path):
+        # Make the directory read-only to cause write failure
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            tmp_path.mkdir(parents=True, exist_ok=True)
+            # Mock Path.write_text to raise an exception
+            with patch.object(Path, 'write_text', side_effect=PermissionError("Permission denied")):
+                with pytest.raises(UnityCommandError) as exc_info:
+                    write_command("test", {})
+                assert "Failed to write command file" in str(exc_info.value)
+
+
+class TestWaitForResponseEdgeCases:
+    """Test edge cases in wait_for_response"""
+
+    def test_wait_verbose_polling(self, tmp_path, capsys):
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            command_id = "test-verbose-poll"
+            response_data = {"id": command_id, "status": "success"}
+
+            # Create response file after a small delay
+            def create_response():
+                time.sleep(0.15)
+                response_file = tmp_path / f"response-{command_id}.json"
+                response_file.write_text(json.dumps(response_data))
+
+            import threading
+            thread = threading.Thread(target=create_response)
+            thread.start()
+
+            result = wait_for_response(command_id, timeout=2, verbose=True)
+            thread.join()
+
+            assert result == response_data
+
+    def test_wait_json_decode_error_recovery(self, tmp_path, capsys):
+        """Test that mid-write JSON errors are retried once"""
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            command_id = "test-json-error"
+            response_file = tmp_path / f"response-{command_id}.json"
+
+            # Write invalid JSON initially (will be overwritten)
+            response_file.write_text("{ invalid json")
+
+            # Track calls to simulate file being written mid-read
+            call_count = [0]
+
+            def mock_read(self):
+                call_count[0] += 1
+                if call_count[0] <= 1:
+                    return "{ invalid"
+                return json.dumps({"id": command_id, "status": "success"})
+
+            with patch.object(Path, 'read_text', mock_read):
+                result = wait_for_response(command_id, timeout=2, verbose=True)
+                assert result["status"] == "success"
+
+    def test_wait_json_decode_error_persistent(self, tmp_path, capsys):
+        """Test that persistent JSON errors raise an exception"""
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            command_id = "test-json-persistent"
+            response_file = tmp_path / f"response-{command_id}.json"
+
+            # Write invalid JSON that stays invalid
+            response_file.write_text("{ not valid json at all")
+
+            with pytest.raises(UnityCommandError) as exc_info:
+                wait_for_response(command_id, timeout=2, verbose=True)
+
+            assert "Failed to parse response JSON" in str(exc_info.value)
+            captured = capsys.readouterr()
+            assert "Warning: Failed to parse response" in captured.err
+
+
+class TestExecuteCommand:
+    """Test execute_command function"""
+
+    def test_execute_command_success(self, tmp_path):
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            # Write command file manually
+            import uuid
+            command_id = str(uuid.uuid4())
+
+            # Mock write_command to return our known ID and create the response
+            def mock_write(action, params):
+                # Create the command file
+                tmp_path.mkdir(parents=True, exist_ok=True)
+                command_file = tmp_path / "command.json"
+                command_file.write_text(json.dumps({
+                    "id": command_id,
+                    "action": action,
+                    "params": params
+                }))
+                # Immediately create the response
+                response_file = tmp_path / f"response-{command_id}.json"
+                response_file.write_text(json.dumps({
+                    "id": command_id,
+                    "status": "success",
+                    "action": "get-status",
+                    "duration_ms": 10,
+                    "error": json.dumps({
+                        "isCompiling": False,
+                        "isUpdating": False,
+                        "isPlaying": False,
+                        "isPaused": False
+                    })
+                }))
+                return command_id
+
+            with patch('unity_command.write_command', side_effect=mock_write):
+                result = execute_command("get-status", {}, timeout=5)
+                assert "Unity Editor Status" in result
+
+    def test_execute_command_with_cleanup(self, tmp_path):
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            # Create an old response file
+            tmp_path.mkdir(parents=True, exist_ok=True)
+            old_file = tmp_path / "response-old-exec.json"
+            old_file.write_text('{"id": "old"}')
+            import os
+            old_time = time.time() - 7200
+            os.utime(old_file, (old_time, old_time))
+
+            import uuid
+            command_id = str(uuid.uuid4())
+
+            def mock_write(action, params):
+                response_file = tmp_path / f"response-{command_id}.json"
+                response_file.write_text(json.dumps({
+                    "id": command_id,
+                    "status": "success",
+                    "action": "compile",
+                    "duration_ms": 100
+                }))
+                return command_id
+
+            with patch('unity_command.write_command', side_effect=mock_write):
+                result = execute_command("compile", {}, timeout=5, cleanup=True)
+                assert "Compilation Successful" in result
+                # Old file should be cleaned up
+                assert not old_file.exists()
+
+    def test_execute_command_verbose(self, tmp_path, capsys):
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            import uuid
+            command_id = str(uuid.uuid4())
+
+            def mock_write(action, params):
+                tmp_path.mkdir(parents=True, exist_ok=True)
+                response_file = tmp_path / f"response-{command_id}.json"
+                response_file.write_text(json.dumps({
+                    "id": command_id,
+                    "status": "success",
+                    "action": "refresh",
+                    "duration_ms": 50
+                }))
+                return command_id
+
+            with patch('unity_command.write_command', side_effect=mock_write):
+                result = execute_command("refresh", {}, timeout=5, verbose=True)
+                assert "Asset Database Refreshed" in result
+
+                captured = capsys.readouterr()
+                assert "Writing command: refresh" in captured.err
+                assert f"Command ID: {command_id}" in captured.err
+                assert "Waiting for response" in captured.err
+
+
+class TestMainFunction:
+    """Test main() CLI function"""
+
+    def test_main_help(self, capsys):
+        with patch('sys.argv', ['unity_command.py', '--help']):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
+
+    def test_main_run_tests(self, tmp_path):
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            with patch('sys.argv', ['unity_command.py', 'run-tests', '--mode', 'EditMode', '--timeout', '1']):
+                # Create response immediately
+                def mock_write(action, params):
+                    command_id = "test-main-123"
+                    response_file = tmp_path / f"response-{command_id}.json"
+                    response_file.write_text(json.dumps({
+                        "id": command_id,
+                        "status": "success",
+                        "action": "run-tests",
+                        "duration_ms": 100,
+                        "result": {"passed": 5, "failed": 0, "skipped": 0, "failures": []}
+                    }))
+                    return command_id
+
+                with patch('unity_command.write_command', side_effect=mock_write):
+                    exit_code = main()
+                    assert exit_code == EXIT_SUCCESS
+
+    def test_main_get_console_logs(self, tmp_path):
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            with patch('sys.argv', ['unity_command.py', 'get-console-logs', '--limit', '10', '--filter', 'Error', '--timeout', '1']):
+                def mock_write(action, params):
+                    assert params.get("limit") == "10"
+                    assert params.get("filter") == "Error"
+                    command_id = "test-logs-123"
+                    response_file = tmp_path / f"response-{command_id}.json"
+                    response_file.write_text(json.dumps({
+                        "id": command_id,
+                        "status": "success",
+                        "action": "get-console-logs",
+                        "consoleLogs": []
+                    }))
+                    return command_id
+
+                with patch('unity_command.write_command', side_effect=mock_write):
+                    exit_code = main()
+                    assert exit_code == EXIT_SUCCESS
+
+    def test_main_timeout_error(self, tmp_path):
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            with patch('sys.argv', ['unity_command.py', 'compile', '--timeout', '1']):
+                # Don't create response - will timeout
+                exit_code = main()
+                assert exit_code == EXIT_TIMEOUT
+
+    def test_main_unity_not_running(self, tmp_path):
+        nonexistent_dir = tmp_path / "nonexistent"
+        with patch('unity_command.UNITY_DIR', nonexistent_dir):
+            with patch('sys.argv', ['unity_command.py', 'get-status', '--timeout', '1']):
+                # Mock write_command to return an ID without creating the directory
+                # This simulates the case where the command file can't be written
+                # because Unity never created the directory structure
+                with patch('unity_command.write_command', return_value="mock-id"):
+                    exit_code = main()
+                    assert exit_code == EXIT_ERROR
+
+    def test_main_command_error(self, tmp_path):
+        # Create a file where the directory should be
+        blocking_file = tmp_path / "blocking"
+        blocking_file.write_text("blocking")
+        unity_dir = blocking_file / "unity"
+
+        with patch('unity_command.UNITY_DIR', unity_dir):
+            with patch('sys.argv', ['unity_command.py', 'compile', '--timeout', '1']):
+                exit_code = main()
+                assert exit_code == EXIT_ERROR
+
+    def test_main_keyboard_interrupt(self, tmp_path):
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            with patch('sys.argv', ['unity_command.py', 'compile', '--timeout', '1']):
+                with patch('unity_command.execute_command', side_effect=KeyboardInterrupt):
+                    exit_code = main()
+                    assert exit_code == EXIT_ERROR
+
+    def test_main_unexpected_error(self, tmp_path):
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            with patch('sys.argv', ['unity_command.py', 'compile', '--timeout', '1']):
+                with patch('unity_command.execute_command', side_effect=RuntimeError("Unexpected")):
+                    exit_code = main()
+                    assert exit_code == EXIT_ERROR
+
+    def test_main_verbose_unexpected_error(self, tmp_path, capsys):
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            with patch('sys.argv', ['unity_command.py', 'compile', '--timeout', '1', '--verbose']):
+                with patch('unity_command.execute_command', side_effect=RuntimeError("Unexpected")):
+                    exit_code = main()
+                    assert exit_code == EXIT_ERROR
+                    captured = capsys.readouterr()
+                    assert "Unexpected error" in captured.err
 
 
 if __name__ == "__main__":
