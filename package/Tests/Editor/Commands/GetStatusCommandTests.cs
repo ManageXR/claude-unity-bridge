@@ -122,6 +122,47 @@ namespace MXR.ClaudeBridge.Tests.Commands {
             Assert.That(Responses.CompleteResponse.id, Is.EqualTo(uniqueId), "Response should echo exact request ID");
         }
 
+        [Test]
+        public void Execute_IncludesEditorStatusModel() {
+            // Act
+            _command.Execute(Request, Responses.OnProgress, Responses.OnComplete);
+
+            // Assert - Check the new editorStatus field (not just error field)
+            Assert.That(Responses.CompleteResponse.editorStatus, Is.Not.Null,
+                "Should include EditorStatus model in response");
+        }
+
+        [Test]
+        public void Execute_EditorStatusHasAllFields() {
+            // Act
+            _command.Execute(Request, Responses.OnProgress, Responses.OnComplete);
+
+            // Assert - Verify EditorStatus model has expected structure
+            var status = Responses.CompleteResponse.editorStatus;
+            Assert.That(status, Is.Not.Null, "EditorStatus should not be null");
+
+            // Just verify it's a valid EditorStatus with boolean fields
+            // (actual values depend on Unity Editor state at test time)
+            Assert.DoesNotThrow(() => {
+                var _ = status.isCompiling;
+                var __ = status.isUpdating;
+                var ___ = status.isPlaying;
+                var ____ = status.isPaused;
+            }, "EditorStatus should have all expected boolean fields");
+        }
+
+        [Test]
+        public void Execute_MaintainsBackwardsCompatibility() {
+            // Act
+            _command.Execute(Request, Responses.OnProgress, Responses.OnComplete);
+
+            // Assert - Both old (error) and new (editorStatus) formats should be present
+            Assert.That(Responses.CompleteResponse.error, Is.Not.Null,
+                "Should still populate error field for backwards compatibility");
+            Assert.That(Responses.CompleteResponse.editorStatus, Is.Not.Null,
+                "Should also populate new editorStatus field");
+        }
+
         /// <summary>
         /// Test data structure matching GetStatusCommand's internal EditorStatus class.
         /// Used for deserializing and validating JSON responses.
