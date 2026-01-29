@@ -372,7 +372,7 @@ To use this skill in Claude Code:
 
 1. Copy the entire `skill/` directory to your Claude Code skills location:
    ```bash
-   cp -r skill ~/.codex/skills/unity
+   cp -r skill ~/.claude/skills/unity
    ```
 
 2. Restart Claude Code to load the skill
