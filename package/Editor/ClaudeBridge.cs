@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using MXR.ClaudeBridge.Commands;
 using MXR.ClaudeBridge.Models;
 using UnityEditor;
@@ -14,6 +15,9 @@ namespace MXR.ClaudeBridge {
         private static readonly Dictionary<string, ICommand> Commands;
         private static string _currentCommandId;
         private static bool _isProcessingCommand;
+
+        // Security: Only allow alphanumeric characters and hyphens in response IDs
+        private static readonly Regex ValidIdPattern = new Regex(@"^[a-fA-F0-9\-]+$", RegexOptions.Compiled);
 
         static ClaudeBridge() {
             CommandDir = Path.Combine(Application.dataPath, "..", ".claude", "unity");
@@ -83,6 +87,10 @@ namespace MXR.ClaudeBridge {
 
                 if (request != null) {
                     WriteResponse(CommandResponse.Error(request.id, request.action, e.Message));
+                } else {
+                    // Generate fallback response with error ID so Python client doesn't hang forever
+                    var fallbackId = $"error-{DateTime.Now:yyyyMMddHHmmss}";
+                    WriteResponse(CommandResponse.Error(fallbackId, "unknown", $"Failed to parse command: {e.Message}"));
                 }
 
                 _isProcessingCommand = false;
@@ -101,6 +109,12 @@ namespace MXR.ClaudeBridge {
 
         private static void WriteResponse(CommandResponse response) {
             try {
+                // Security: Validate response ID to prevent path traversal attacks
+                if (string.IsNullOrEmpty(response.id) || !ValidIdPattern.IsMatch(response.id)) {
+                    Debug.LogError($"[ClaudeBridge] Invalid response ID format: {response.id}");
+                    return;
+                }
+
                 EnsureDirectoryExists();
                 var responsePath = Path.Combine(CommandDir, $"response-{response.id}.json");
                 var json = JsonUtility.ToJson(response, true);

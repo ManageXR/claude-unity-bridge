@@ -7,10 +7,22 @@ using UnityEngine;
 
 namespace MXR.ClaudeBridge.Commands {
     public class GetConsoleLogsCommand : ICommand {
+        // Log mode bitmasks from Unity's internal LogEntry structure
+        // These values are used to determine log type from the mode field
+        private const int LogModeError = 0x01;       // Error or Assert
+        private const int LogModeAssert = 0x02;      // Assert
+        private const int LogModeFatal = 0x04;       // Fatal error
+        private const int LogModeException = 0x10;   // Exception (16)
+        private const int LogModeWarning = 0x20;     // Warning (32)
+
+        // Combined masks for type detection
+        private const int LogModeErrorMask = LogModeError | LogModeAssert | LogModeFatal;  // 0x07
+        private const int LogModeExceptionOrWarningMask = LogModeException | LogModeWarning;  // 0x30
         public void Execute(CommandRequest request, Action<CommandResponse> onProgress, Action<CommandResponse> onComplete) {
             Debug.Log("[ClaudeBridge] Getting console logs");
 
             // Parse limit parameter (default: 50)
+            // Supports both string and int formats for backwards compatibility
             int limit = 50;
             if (request.@params != null && !string.IsNullOrEmpty(request.@params.limit)) {
                 if (!int.TryParse(request.@params.limit, out limit)) {
@@ -88,12 +100,11 @@ namespace MXR.ClaudeBridge.Commands {
                     string message = messageField.GetValue(logEntry) as string;
                     int mode = (int)modeField.GetValue(logEntry);
 
-                    // Determine log type from mode
-                    // mode: 0 = Error, 1 = Assert, 2 = Log, 4 = Fatal, 16 = Exception, 32 = Warning
+                        // Determine log type from mode using named constants
                     string logType = "Log";
-                    if ((mode & 0x30) != 0) { // 16 or 32
-                        logType = (mode & 0x20) != 0 ? "Warning" : "Exception";
-                    } else if ((mode & 0x05) != 0) { // 0, 1, or 4
+                    if ((mode & LogModeExceptionOrWarningMask) != 0) {
+                        logType = (mode & LogModeWarning) != 0 ? "Warning" : "Exception";
+                    } else if ((mode & LogModeErrorMask) != 0) {
                         logType = "Error";
                     }
 

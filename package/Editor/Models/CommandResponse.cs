@@ -13,6 +13,7 @@ namespace MXR.ClaudeBridge.Models {
         public List<TestFailure> failures;
         public string error;
         public List<ConsoleLogEntry> consoleLogs;
+        public EditorStatus editorStatus;
 
         public static CommandResponse Running(string id, string action) {
             return new CommandResponse {
@@ -79,5 +80,13 @@ namespace MXR.ClaudeBridge.Models {
         public string stackTrace;
         public string type; // "Log", "Warning", "Error"
         public int count; // For collapsed duplicates
+    }
+
+    [Serializable]
+    public class EditorStatus {
+        public bool isCompiling;
+        public bool isUpdating;
+        public bool isPlaying;
+        public bool isPaused;
     }
 }
