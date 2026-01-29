@@ -31,16 +31,19 @@ EXIT_TIMEOUT = 2
 
 class UnityCommandError(Exception):
     """Base exception for Unity command errors"""
+
     pass
 
 
 class UnityNotRunningError(UnityCommandError):
     """Unity Editor is not running or not responding"""
+
     pass
 
 
 class CommandTimeoutError(UnityCommandError):
     """Command execution timed out"""
+
     pass
 
 
@@ -59,11 +62,7 @@ def write_command(action: str, params: Dict[str, Any]) -> str:
         UnityCommandError: If writing fails
     """
     command_id = str(uuid.uuid4())
-    command = {
-        "id": command_id,
-        "action": action,
-        "params": params
-    }
+    command = {"id": command_id, "action": action, "params": params}
 
     # Security: Ensure UNITY_DIR is not a symlink (prevent symlink attacks)
     if UNITY_DIR.exists() and UNITY_DIR.is_symlink():
@@ -77,7 +76,7 @@ def write_command(action: str, params: Dict[str, Any]) -> str:
 
     # Atomic write using temp file
     command_file = UNITY_DIR / "command.json"
-    temp_file = command_file.with_suffix('.tmp')
+    temp_file = command_file.with_suffix(".tmp")
 
     try:
         temp_file.write_text(json.dumps(command, indent=2))
@@ -209,7 +208,7 @@ def format_test_results(response: Dict[str, Any], status: str, duration: float) 
         f"✓ Tests Passed: {passed}",
         f"✗ Tests Failed: {failed}",
         f"○ Tests Skipped: {skipped}",
-        f"Duration: {duration:.2f}s"
+        f"Duration: {duration:.2f}s",
     ]
 
     # Failed tests details
@@ -405,8 +404,9 @@ def cleanup_response_file(command_id: str, verbose: bool = False):
             print(f"Warning: Failed to cleanup response file: {e}", file=sys.stderr)
 
 
-def execute_command(action: str, params: Dict[str, Any], timeout: int,
-                    cleanup: bool = False, verbose: bool = False) -> str:
+def execute_command(
+    action: str, params: Dict[str, Any], timeout: int, cleanup: bool = False, verbose: bool = False
+) -> str:
     """
     Execute Unity command and return formatted response.
 
@@ -466,31 +466,27 @@ Examples:
   %(prog)s get-console-logs --limit 20 --filter Error
   %(prog)s get-status
   %(prog)s refresh
-        """
+        """,
     )
 
     parser.add_argument(
         "command",
         choices=["run-tests", "compile", "refresh", "get-status", "get-console-logs"],
-        help="Command to execute"
+        help="Command to execute",
     )
 
     # Test command options
     parser.add_argument(
-        "--mode",
-        choices=["EditMode", "PlayMode"],
-        help="Test mode (for run-tests)"
+        "--mode", choices=["EditMode", "PlayMode"], help="Test mode (for run-tests)"
     )
     parser.add_argument(
         "--filter",
-        help="Test filter pattern (for run-tests) or log type filter (for get-console-logs)"
+        help="Test filter pattern (for run-tests) or log type filter (for get-console-logs)",
     )
 
     # Console logs options
     parser.add_argument(
-        "--limit",
-        type=int,
-        help="Maximum number of logs to retrieve (for get-console-logs)"
+        "--limit", type=int, help="Maximum number of logs to retrieve (for get-console-logs)"
     )
 
     # General options
@@ -498,18 +494,12 @@ Examples:
         "--timeout",
         type=int,
         default=DEFAULT_TIMEOUT,
-        help=f"Command timeout in seconds (default: {DEFAULT_TIMEOUT})"
+        help=f"Command timeout in seconds (default: {DEFAULT_TIMEOUT})",
     )
     parser.add_argument(
-        "--cleanup",
-        action="store_true",
-        help="Cleanup old response files before executing"
+        "--cleanup", action="store_true", help="Cleanup old response files before executing"
     )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Print verbose progress messages"
-    )
+    parser.add_argument("--verbose", action="store_true", help="Print verbose progress messages")
 
     args = parser.parse_args()
 
@@ -545,7 +535,7 @@ Examples:
             params=params,
             timeout=args.timeout,
             cleanup=args.cleanup,
-            verbose=args.verbose
+            verbose=args.verbose,
         )
         print(result)
         return EXIT_SUCCESS
@@ -570,6 +560,7 @@ Examples:
         print(f"Unexpected error: {e}", file=sys.stderr)
         if args.verbose:
             import traceback
+
             traceback.print_exc()
         return EXIT_ERROR
 

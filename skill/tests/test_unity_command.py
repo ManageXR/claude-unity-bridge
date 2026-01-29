@@ -46,12 +46,7 @@ class TestFormatTestResults:
     def test_all_tests_passed(self):
         response = {
             "status": "success",
-            "result": {
-                "passed": 410,
-                "failed": 0,
-                "skipped": 0,
-                "failures": []
-            }
+            "result": {"passed": 410, "failed": 0, "skipped": 0, "failures": []},
         }
         result = format_test_results(response, "success", 1.25)
 
@@ -71,14 +66,14 @@ class TestFormatTestResults:
                 "failures": [
                     {
                         "name": "MXR.Tests.AuthTests.LoginTest",
-                        "message": "Expected: success\nActual: failure"
+                        "message": "Expected: success\nActual: failure",
                     },
                     {
                         "name": "MXR.Tests.NetworkTests.TimeoutTest",
-                        "message": "NullReferenceException"
-                    }
-                ]
-            }
+                        "message": "NullReferenceException",
+                    },
+                ],
+            },
         }
         result = format_test_results(response, "failure", 3.5)
 
@@ -103,8 +98,7 @@ class TestFormatCompileResults:
 
     def test_compile_failure(self):
         error_msg = (
-            "Assets/Scripts/Player.cs(25,10): "
-            "error CS0103: The name 'invalidVar' does not exist"
+            "Assets/Scripts/Player.cs(25,10): " "error CS0103: The name 'invalidVar' does not exist"
         )
         response = {"status": "failure", "error": error_msg}
         result = format_compile_results(response, "failure", 1.8)
@@ -123,14 +117,14 @@ class TestFormatConsoleLogs:
                     "message": "NullReferenceException: Object reference not set",
                     "stackTrace": "Player.Update () (at Assets/Scripts/Player.cs:34)",
                     "type": "Error",
-                    "count": 1
+                    "count": 1,
                 },
                 {
                     "message": "Shader compilation succeeded",
                     "stackTrace": "",
                     "type": "Log",
-                    "count": 3
-                }
+                    "count": 3,
+                },
             ]
         }
         result = format_console_logs(response)
@@ -154,12 +148,9 @@ class TestFormatEditorStatus:
 
     def test_editor_ready(self):
         response = {
-            "error": json.dumps({
-                "isCompiling": False,
-                "isUpdating": False,
-                "isPlaying": False,
-                "isPaused": False
-            })
+            "error": json.dumps(
+                {"isCompiling": False, "isUpdating": False, "isPlaying": False, "isPaused": False}
+            )
         }
         result = format_editor_status(response)
 
@@ -169,12 +160,9 @@ class TestFormatEditorStatus:
 
     def test_editor_compiling(self):
         response = {
-            "error": json.dumps({
-                "isCompiling": True,
-                "isUpdating": False,
-                "isPlaying": False,
-                "isPaused": False
-            })
+            "error": json.dumps(
+                {"isCompiling": True, "isUpdating": False, "isPlaying": False, "isPaused": False}
+            )
         }
         result = format_editor_status(response)
 
@@ -182,12 +170,9 @@ class TestFormatEditorStatus:
 
     def test_editor_playing(self):
         response = {
-            "error": json.dumps({
-                "isCompiling": False,
-                "isUpdating": False,
-                "isPlaying": True,
-                "isPaused": False
-            })
+            "error": json.dumps(
+                {"isCompiling": False, "isUpdating": False, "isPlaying": True, "isPaused": False}
+            )
         }
         result = format_editor_status(response)
 
@@ -195,12 +180,9 @@ class TestFormatEditorStatus:
 
     def test_editor_paused(self):
         response = {
-            "error": json.dumps({
-                "isCompiling": False,
-                "isUpdating": False,
-                "isPlaying": True,
-                "isPaused": True
-            })
+            "error": json.dumps(
+                {"isCompiling": False, "isUpdating": False, "isPlaying": True, "isPaused": True}
+            )
         }
         result = format_editor_status(response)
 
@@ -213,7 +195,7 @@ class TestFormatEditorStatus:
                 "isCompiling": False,
                 "isUpdating": False,
                 "isPlaying": False,
-                "isPaused": False
+                "isPaused": False,
             }
         }
         result = format_editor_status(response)
@@ -229,7 +211,7 @@ class TestFormatEditorStatus:
                 "isCompiling": True,
                 "isUpdating": False,
                 "isPlaying": False,
-                "isPaused": False
+                "isPaused": False,
             }
         }
         result = format_editor_status(response)
@@ -243,14 +225,16 @@ class TestFormatEditorStatus:
                 "isCompiling": True,  # New format says compiling
                 "isUpdating": False,
                 "isPlaying": False,
-                "isPaused": False
+                "isPaused": False,
             },
-            "error": json.dumps({
-                "isCompiling": False,  # Legacy format says ready
-                "isUpdating": False,
-                "isPlaying": False,
-                "isPaused": False
-            })
+            "error": json.dumps(
+                {
+                    "isCompiling": False,  # Legacy format says ready
+                    "isUpdating": False,
+                    "isPlaying": False,
+                    "isPaused": False,
+                }
+            ),
         }
         result = format_editor_status(response)
 
@@ -269,10 +253,7 @@ class TestFormatRefreshResults:
         assert "Duration: 0.50s" in result
 
     def test_refresh_failure(self):
-        response = {
-            "status": "failure",
-            "error": "Failed to refresh: I/O error"
-        }
+        response = {"status": "failure", "error": "Failed to refresh: I/O error"}
         result = format_refresh_results(response, "failure", 0.3)
 
         assert "✗ Refresh Failed" in result
@@ -283,10 +264,7 @@ class TestFormatResponse:
     """Test main format_response function"""
 
     def test_format_error_status(self):
-        response = {
-            "status": "error",
-            "error": "Cannot compile while Unity is updating"
-        }
+        response = {"status": "error", "error": "Cannot compile while Unity is updating"}
         result = format_response(response, "compile")
 
         assert "✗ Error:" in result
@@ -296,12 +274,7 @@ class TestFormatResponse:
         response = {
             "status": "success",
             "duration_ms": 1250,
-            "result": {
-                "passed": 10,
-                "failed": 0,
-                "skipped": 0,
-                "failures": []
-            }
+            "result": {"passed": 10, "failed": 0, "skipped": 0, "failures": []},
         }
         result = format_response(response, "run-tests")
 
@@ -313,12 +286,12 @@ class TestWriteCommand:
 
     def test_write_command_creates_file(self, tmp_path):
         # Patch UNITY_DIR to use temp directory
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             command_id = write_command("test-action", {"param": "value"})
 
             # Check UUID format
             assert len(command_id) == 36
-            assert command_id.count('-') == 4
+            assert command_id.count("-") == 4
 
             # Check file exists
             command_file = tmp_path / "command.json"
@@ -332,7 +305,7 @@ class TestWriteCommand:
 
     def test_write_command_creates_directory(self, tmp_path):
         unity_dir = tmp_path / "nested" / "unity"
-        with patch('unity_command.UNITY_DIR', unity_dir):
+        with patch("unity_command.UNITY_DIR", unity_dir):
             write_command("test", {})
             assert unity_dir.exists()
 
@@ -341,13 +314,9 @@ class TestWaitForResponse:
     """Test response waiting and polling"""
 
     def test_wait_for_response_success(self, tmp_path):
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             command_id = "test-123"
-            response_data = {
-                "id": command_id,
-                "status": "success",
-                "action": "test"
-            }
+            response_data = {"id": command_id, "status": "success", "action": "test"}
 
             # Create response file
             response_file = tmp_path / f"response-{command_id}.json"
@@ -358,7 +327,7 @@ class TestWaitForResponse:
             assert result == response_data
 
     def test_wait_for_response_timeout(self, tmp_path):
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             # Create directory to simulate Unity running
             tmp_path.mkdir(exist_ok=True)
 
@@ -370,7 +339,7 @@ class TestWaitForResponse:
     def test_wait_for_response_unity_not_running(self, tmp_path):
         # Don't create directory to simulate Unity not running
         nonexistent_dir = tmp_path / "does-not-exist"
-        with patch('unity_command.UNITY_DIR', nonexistent_dir):
+        with patch("unity_command.UNITY_DIR", nonexistent_dir):
             with pytest.raises(UnityNotRunningError) as exc_info:
                 wait_for_response("test-id", timeout=1)
 
@@ -381,7 +350,7 @@ class TestCleanupOldResponses:
     """Test cleanup functionality"""
 
     def test_cleanup_old_responses(self, tmp_path):
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             # Create some response files
             old_file = tmp_path / "response-old-123.json"
             recent_file = tmp_path / "response-recent-456.json"
@@ -392,6 +361,7 @@ class TestCleanupOldResponses:
             # Make old file appear old
             import os
             import time
+
             old_time = time.time() - 7200  # 2 hours ago
             os.utime(old_file, (old_time, old_time))
 
@@ -405,7 +375,7 @@ class TestCleanupOldResponses:
     def test_cleanup_no_directory(self, tmp_path):
         # Should not raise error if directory doesn't exist
         nonexistent_dir = tmp_path / "does-not-exist"
-        with patch('unity_command.UNITY_DIR', nonexistent_dir):
+        with patch("unity_command.UNITY_DIR", nonexistent_dir):
             cleanup_old_responses()  # Should not raise
 
 
@@ -414,7 +384,7 @@ class TestIntegration:
 
     def test_full_command_cycle(self, tmp_path):
         """Test writing command, waiting for response, and formatting"""
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             # Write command
             command_id = write_command("get-status", {})
 
@@ -424,12 +394,14 @@ class TestIntegration:
                 "status": "success",
                 "action": "get-status",
                 "duration_ms": 10,
-                "error": json.dumps({
-                    "isCompiling": False,
-                    "isUpdating": False,
-                    "isPlaying": False,
-                    "isPaused": False
-                })
+                "error": json.dumps(
+                    {
+                        "isCompiling": False,
+                        "isUpdating": False,
+                        "isPlaying": False,
+                        "isPaused": False,
+                    }
+                ),
             }
             response_file = tmp_path / f"response-{command_id}.json"
             response_file.write_text(json.dumps(response_data))
@@ -521,12 +493,9 @@ class TestFormatEditorStatusEdgeCases:
 
     def test_editor_updating(self):
         response = {
-            "error": json.dumps({
-                "isCompiling": False,
-                "isUpdating": True,
-                "isPlaying": False,
-                "isPaused": False
-            })
+            "error": json.dumps(
+                {"isCompiling": False, "isUpdating": True, "isPlaying": False, "isPaused": False}
+            )
         }
         result = format_editor_status(response)
         assert "⏳ Yes" in result
@@ -543,12 +512,7 @@ class TestFormatConsoleLogsEdgeCases:
     def test_console_logs_with_warning(self):
         response = {
             "consoleLogs": [
-                {
-                    "message": "Deprecated API usage",
-                    "stackTrace": "",
-                    "type": "Warning",
-                    "count": 1
-                }
+                {"message": "Deprecated API usage", "stackTrace": "", "type": "Warning", "count": 1}
             ]
         }
         result = format_console_logs(response)
@@ -557,7 +521,7 @@ class TestFormatConsoleLogsEdgeCases:
     def test_console_logs_with_filter(self):
         response = {
             "consoleLogs": [{"message": "test", "type": "Error", "stackTrace": "", "count": 1}],
-            "params": {"filter": "Error"}
+            "params": {"filter": "Error"},
         }
         result = format_console_logs(response)
         assert "filtered by Error" in result
@@ -567,7 +531,7 @@ class TestCleanupResponseFile:
     """Test cleanup_response_file function"""
 
     def test_cleanup_existing_file(self, tmp_path):
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             command_id = "test-cleanup-123"
             response_file = tmp_path / f"response-{command_id}.json"
             response_file.write_text('{"id": "test"}')
@@ -576,12 +540,12 @@ class TestCleanupResponseFile:
             assert not response_file.exists()
 
     def test_cleanup_nonexistent_file(self, tmp_path):
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             # Should not raise error
             cleanup_response_file("nonexistent-id")
 
     def test_cleanup_with_verbose(self, tmp_path, capsys):
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             command_id = "test-verbose-123"
             response_file = tmp_path / f"response-{command_id}.json"
             response_file.write_text('{"id": "test"}')
@@ -596,11 +560,12 @@ class TestCleanupOldResponsesVerbose:
     """Test cleanup_old_responses verbose mode"""
 
     def test_cleanup_verbose_output(self, tmp_path, capsys):
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             old_file = tmp_path / "response-old-verbose.json"
             old_file.write_text('{"id": "old"}')
 
             import os
+
             old_time = time.time() - 7200
             os.utime(old_file, (old_time, old_time))
 
@@ -619,17 +584,17 @@ class TestWriteCommandErrors:
         blocking_file.write_text("blocking")
         unity_dir = blocking_file / "unity"
 
-        with patch('unity_command.UNITY_DIR', unity_dir):
+        with patch("unity_command.UNITY_DIR", unity_dir):
             with pytest.raises(UnityCommandError) as exc_info:
                 write_command("test", {})
             assert "Failed to create Unity directory" in str(exc_info.value)
 
     def test_write_command_file_write_failure(self, tmp_path):
         # Make the directory read-only to cause write failure
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             tmp_path.mkdir(parents=True, exist_ok=True)
             # Mock Path.write_text to raise an exception
-            with patch.object(Path, 'write_text', side_effect=PermissionError("Permission denied")):
+            with patch.object(Path, "write_text", side_effect=PermissionError("Permission denied")):
                 with pytest.raises(UnityCommandError) as exc_info:
                     write_command("test", {})
                 assert "Failed to write command file" in str(exc_info.value)
@@ -639,7 +604,7 @@ class TestWaitForResponseEdgeCases:
     """Test edge cases in wait_for_response"""
 
     def test_wait_verbose_polling(self, tmp_path, capsys):
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             command_id = "test-verbose-poll"
             response_data = {"id": command_id, "status": "success"}
 
@@ -650,6 +615,7 @@ class TestWaitForResponseEdgeCases:
                 response_file.write_text(json.dumps(response_data))
 
             import threading
+
             thread = threading.Thread(target=create_response)
             thread.start()
 
@@ -660,7 +626,7 @@ class TestWaitForResponseEdgeCases:
 
     def test_wait_json_decode_error_recovery(self, tmp_path, capsys):
         """Test that mid-write JSON errors are retried once"""
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             command_id = "test-json-error"
             response_file = tmp_path / f"response-{command_id}.json"
 
@@ -676,13 +642,13 @@ class TestWaitForResponseEdgeCases:
                     return "{ invalid"
                 return json.dumps({"id": command_id, "status": "success"})
 
-            with patch.object(Path, 'read_text', mock_read):
+            with patch.object(Path, "read_text", mock_read):
                 result = wait_for_response(command_id, timeout=2, verbose=True)
                 assert result["status"] == "success"
 
     def test_wait_json_decode_error_persistent(self, tmp_path, capsys):
         """Test that persistent JSON errors raise an exception"""
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             command_id = "test-json-persistent"
             response_file = tmp_path / f"response-{command_id}.json"
 
@@ -701,9 +667,10 @@ class TestExecuteCommand:
     """Test execute_command function"""
 
     def test_execute_command_success(self, tmp_path):
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             # Write command file manually
             import uuid
+
             command_id = str(uuid.uuid4())
 
             # Mock write_command to return our known ID and create the response
@@ -711,77 +678,92 @@ class TestExecuteCommand:
                 # Create the command file
                 tmp_path.mkdir(parents=True, exist_ok=True)
                 command_file = tmp_path / "command.json"
-                command_file.write_text(json.dumps({
-                    "id": command_id,
-                    "action": action,
-                    "params": params
-                }))
+                command_file.write_text(
+                    json.dumps({"id": command_id, "action": action, "params": params})
+                )
                 # Immediately create the response
                 response_file = tmp_path / f"response-{command_id}.json"
-                response_file.write_text(json.dumps({
-                    "id": command_id,
-                    "status": "success",
-                    "action": "get-status",
-                    "duration_ms": 10,
-                    "error": json.dumps({
-                        "isCompiling": False,
-                        "isUpdating": False,
-                        "isPlaying": False,
-                        "isPaused": False
-                    })
-                }))
+                response_file.write_text(
+                    json.dumps(
+                        {
+                            "id": command_id,
+                            "status": "success",
+                            "action": "get-status",
+                            "duration_ms": 10,
+                            "error": json.dumps(
+                                {
+                                    "isCompiling": False,
+                                    "isUpdating": False,
+                                    "isPlaying": False,
+                                    "isPaused": False,
+                                }
+                            ),
+                        }
+                    )
+                )
                 return command_id
 
-            with patch('unity_command.write_command', side_effect=mock_write):
+            with patch("unity_command.write_command", side_effect=mock_write):
                 result = execute_command("get-status", {}, timeout=5)
                 assert "Unity Editor Status" in result
 
     def test_execute_command_with_cleanup(self, tmp_path):
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             # Create an old response file
             tmp_path.mkdir(parents=True, exist_ok=True)
             old_file = tmp_path / "response-old-exec.json"
             old_file.write_text('{"id": "old"}')
             import os
+
             old_time = time.time() - 7200
             os.utime(old_file, (old_time, old_time))
 
             import uuid
+
             command_id = str(uuid.uuid4())
 
             def mock_write(action, params):
                 response_file = tmp_path / f"response-{command_id}.json"
-                response_file.write_text(json.dumps({
-                    "id": command_id,
-                    "status": "success",
-                    "action": "compile",
-                    "duration_ms": 100
-                }))
+                response_file.write_text(
+                    json.dumps(
+                        {
+                            "id": command_id,
+                            "status": "success",
+                            "action": "compile",
+                            "duration_ms": 100,
+                        }
+                    )
+                )
                 return command_id
 
-            with patch('unity_command.write_command', side_effect=mock_write):
+            with patch("unity_command.write_command", side_effect=mock_write):
                 result = execute_command("compile", {}, timeout=5, cleanup=True)
                 assert "Compilation Successful" in result
                 # Old file should be cleaned up
                 assert not old_file.exists()
 
     def test_execute_command_verbose(self, tmp_path, capsys):
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             import uuid
+
             command_id = str(uuid.uuid4())
 
             def mock_write(action, params):
                 tmp_path.mkdir(parents=True, exist_ok=True)
                 response_file = tmp_path / f"response-{command_id}.json"
-                response_file.write_text(json.dumps({
-                    "id": command_id,
-                    "status": "success",
-                    "action": "refresh",
-                    "duration_ms": 50
-                }))
+                response_file.write_text(
+                    json.dumps(
+                        {
+                            "id": command_id,
+                            "status": "success",
+                            "action": "refresh",
+                            "duration_ms": 50,
+                        }
+                    )
+                )
                 return command_id
 
-            with patch('unity_command.write_command', side_effect=mock_write):
+            with patch("unity_command.write_command", side_effect=mock_write):
                 result = execute_command("refresh", {}, timeout=5, verbose=True)
                 assert "Asset Database Refreshed" in result
 
@@ -795,71 +777,86 @@ class TestMainFunction:
     """Test main() CLI function"""
 
     def test_main_help(self, capsys):
-        with patch('sys.argv', ['unity_command.py', '--help']):
+        with patch("sys.argv", ["unity_command.py", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
 
     def test_main_run_tests(self, tmp_path):
-        with patch('unity_command.UNITY_DIR', tmp_path):
-            argv = ['unity_command.py', 'run-tests', '--mode', 'EditMode', '--timeout', '1']
-            with patch('sys.argv', argv):
+        with patch("unity_command.UNITY_DIR", tmp_path):
+            argv = ["unity_command.py", "run-tests", "--mode", "EditMode", "--timeout", "1"]
+            with patch("sys.argv", argv):
                 # Create response immediately
                 def mock_write(action, params):
                     command_id = "test-main-123"
                     response_file = tmp_path / f"response-{command_id}.json"
-                    response_file.write_text(json.dumps({
-                        "id": command_id,
-                        "status": "success",
-                        "action": "run-tests",
-                        "duration_ms": 100,
-                        "result": {"passed": 5, "failed": 0, "skipped": 0, "failures": []}
-                    }))
+                    response_file.write_text(
+                        json.dumps(
+                            {
+                                "id": command_id,
+                                "status": "success",
+                                "action": "run-tests",
+                                "duration_ms": 100,
+                                "result": {"passed": 5, "failed": 0, "skipped": 0, "failures": []},
+                            }
+                        )
+                    )
                     return command_id
 
-                with patch('unity_command.write_command', side_effect=mock_write):
+                with patch("unity_command.write_command", side_effect=mock_write):
                     exit_code = main()
                     assert exit_code == EXIT_SUCCESS
 
     def test_main_get_console_logs(self, tmp_path):
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             argv = [
-                'unity_command.py', 'get-console-logs',
-                '--limit', '10', '--filter', 'Error', '--timeout', '1'
+                "unity_command.py",
+                "get-console-logs",
+                "--limit",
+                "10",
+                "--filter",
+                "Error",
+                "--timeout",
+                "1",
             ]
-            with patch('sys.argv', argv):
+            with patch("sys.argv", argv):
+
                 def mock_write(action, params):
                     assert params.get("limit") == "10"
                     assert params.get("filter") == "Error"
                     command_id = "test-logs-123"
                     response_file = tmp_path / f"response-{command_id}.json"
-                    response_file.write_text(json.dumps({
-                        "id": command_id,
-                        "status": "success",
-                        "action": "get-console-logs",
-                        "consoleLogs": []
-                    }))
+                    response_file.write_text(
+                        json.dumps(
+                            {
+                                "id": command_id,
+                                "status": "success",
+                                "action": "get-console-logs",
+                                "consoleLogs": [],
+                            }
+                        )
+                    )
                     return command_id
 
-                with patch('unity_command.write_command', side_effect=mock_write):
+                with patch("unity_command.write_command", side_effect=mock_write):
                     exit_code = main()
                     assert exit_code == EXIT_SUCCESS
 
     def test_main_timeout_error(self, tmp_path):
-        with patch('unity_command.UNITY_DIR', tmp_path):
-            with patch('sys.argv', ['unity_command.py', 'compile', '--timeout', '1']):
+        with patch("unity_command.UNITY_DIR", tmp_path):
+            with patch("sys.argv", ["unity_command.py", "compile", "--timeout", "1"]):
                 # Don't create response - will timeout
                 exit_code = main()
                 assert exit_code == EXIT_TIMEOUT
 
     def test_main_unity_not_running(self, tmp_path):
         nonexistent_dir = tmp_path / "nonexistent"
-        with patch('unity_command.UNITY_DIR', nonexistent_dir):
-            with patch('sys.argv', ['unity_command.py', 'get-status', '--timeout', '1']):
+        with patch("unity_command.UNITY_DIR", nonexistent_dir):
+            with patch("sys.argv", ["unity_command.py", "get-status", "--timeout", "1"]):
                 # Mock write_command to return an ID without creating the directory
                 # This simulates the case where the command file can't be written
                 # because Unity never created the directory structure
-                with patch('unity_command.write_command', return_value="mock-id"):
+                with patch("unity_command.write_command", return_value="mock-id"):
                     exit_code = main()
                     assert exit_code == EXIT_ERROR
 
@@ -869,29 +866,29 @@ class TestMainFunction:
         blocking_file.write_text("blocking")
         unity_dir = blocking_file / "unity"
 
-        with patch('unity_command.UNITY_DIR', unity_dir):
-            with patch('sys.argv', ['unity_command.py', 'compile', '--timeout', '1']):
+        with patch("unity_command.UNITY_DIR", unity_dir):
+            with patch("sys.argv", ["unity_command.py", "compile", "--timeout", "1"]):
                 exit_code = main()
                 assert exit_code == EXIT_ERROR
 
     def test_main_keyboard_interrupt(self, tmp_path):
-        with patch('unity_command.UNITY_DIR', tmp_path):
-            with patch('sys.argv', ['unity_command.py', 'compile', '--timeout', '1']):
-                with patch('unity_command.execute_command', side_effect=KeyboardInterrupt):
+        with patch("unity_command.UNITY_DIR", tmp_path):
+            with patch("sys.argv", ["unity_command.py", "compile", "--timeout", "1"]):
+                with patch("unity_command.execute_command", side_effect=KeyboardInterrupt):
                     exit_code = main()
                     assert exit_code == EXIT_ERROR
 
     def test_main_unexpected_error(self, tmp_path):
-        with patch('unity_command.UNITY_DIR', tmp_path):
-            with patch('sys.argv', ['unity_command.py', 'compile', '--timeout', '1']):
-                with patch('unity_command.execute_command', side_effect=RuntimeError("Unexpected")):
+        with patch("unity_command.UNITY_DIR", tmp_path):
+            with patch("sys.argv", ["unity_command.py", "compile", "--timeout", "1"]):
+                with patch("unity_command.execute_command", side_effect=RuntimeError("Unexpected")):
                     exit_code = main()
                     assert exit_code == EXIT_ERROR
 
     def test_main_verbose_unexpected_error(self, tmp_path, capsys):
-        with patch('unity_command.UNITY_DIR', tmp_path):
-            with patch('sys.argv', ['unity_command.py', 'compile', '--timeout', '1', '--verbose']):
-                with patch('unity_command.execute_command', side_effect=RuntimeError("Unexpected")):
+        with patch("unity_command.UNITY_DIR", tmp_path):
+            with patch("sys.argv", ["unity_command.py", "compile", "--timeout", "1", "--verbose"]):
+                with patch("unity_command.execute_command", side_effect=RuntimeError("Unexpected")):
                     exit_code = main()
                     assert exit_code == EXIT_ERROR
                     captured = capsys.readouterr()
@@ -903,8 +900,8 @@ class TestArgumentValidation:
 
     def test_timeout_zero_rejected(self, tmp_path, capsys):
         """--timeout 0 should fail validation"""
-        with patch('unity_command.UNITY_DIR', tmp_path):
-            with patch('sys.argv', ['unity_command.py', 'get-status', '--timeout', '0']):
+        with patch("unity_command.UNITY_DIR", tmp_path):
+            with patch("sys.argv", ["unity_command.py", "get-status", "--timeout", "0"]):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
                 assert exc_info.value.code == 2  # argparse error exit code
@@ -914,8 +911,8 @@ class TestArgumentValidation:
 
     def test_timeout_negative_rejected(self, tmp_path, capsys):
         """--timeout -5 should fail validation"""
-        with patch('unity_command.UNITY_DIR', tmp_path):
-            with patch('sys.argv', ['unity_command.py', 'compile', '--timeout', '-5']):
+        with patch("unity_command.UNITY_DIR", tmp_path):
+            with patch("sys.argv", ["unity_command.py", "compile", "--timeout", "-5"]):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
                 assert exc_info.value.code == 2
@@ -925,12 +922,9 @@ class TestArgumentValidation:
 
     def test_limit_zero_rejected(self, tmp_path, capsys):
         """--limit 0 should fail validation"""
-        with patch('unity_command.UNITY_DIR', tmp_path):
-            argv = [
-                'unity_command.py', 'get-console-logs',
-                '--limit', '0', '--timeout', '1'
-            ]
-            with patch('sys.argv', argv):
+        with patch("unity_command.UNITY_DIR", tmp_path):
+            argv = ["unity_command.py", "get-console-logs", "--limit", "0", "--timeout", "1"]
+            with patch("sys.argv", argv):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
                 assert exc_info.value.code == 2
@@ -941,12 +935,9 @@ class TestArgumentValidation:
 
     def test_limit_negative_rejected(self, tmp_path, capsys):
         """--limit -1 should fail validation"""
-        with patch('unity_command.UNITY_DIR', tmp_path):
-            argv = [
-                'unity_command.py', 'get-console-logs',
-                '--limit', '-1', '--timeout', '1'
-            ]
-            with patch('sys.argv', argv):
+        with patch("unity_command.UNITY_DIR", tmp_path):
+            argv = ["unity_command.py", "get-console-logs", "--limit", "-1", "--timeout", "1"]
+            with patch("sys.argv", argv):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
                 assert exc_info.value.code == 2
@@ -956,12 +947,9 @@ class TestArgumentValidation:
 
     def test_limit_too_large_rejected(self, tmp_path, capsys):
         """--limit 1001 should fail validation (exceeds MAX_LIMIT)"""
-        with patch('unity_command.UNITY_DIR', tmp_path):
-            argv = [
-                'unity_command.py', 'get-console-logs',
-                '--limit', '1001', '--timeout', '1'
-            ]
-            with patch('sys.argv', argv):
+        with patch("unity_command.UNITY_DIR", tmp_path):
+            argv = ["unity_command.py", "get-console-logs", "--limit", "1001", "--timeout", "1"]
+            with patch("sys.argv", argv):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
                 assert exc_info.value.code == 2
@@ -972,48 +960,52 @@ class TestArgumentValidation:
 
     def test_limit_valid_boundary(self, tmp_path):
         """--limit 1 and --limit 1000 should be accepted"""
-        with patch('unity_command.UNITY_DIR', tmp_path):
+        with patch("unity_command.UNITY_DIR", tmp_path):
             # Test lower boundary
-            argv = [
-                'unity_command.py', 'get-console-logs',
-                '--limit', '1', '--timeout', '1'
-            ]
-            with patch('sys.argv', argv):
+            argv = ["unity_command.py", "get-console-logs", "--limit", "1", "--timeout", "1"]
+            with patch("sys.argv", argv):
+
                 def mock_write(action, params):
                     assert params.get("limit") == "1"  # String for C# compatibility
                     command_id = "test-limit-1"
                     response_file = tmp_path / f"response-{command_id}.json"
-                    response_file.write_text(json.dumps({
-                        "id": command_id,
-                        "status": "success",
-                        "action": "get-console-logs",
-                        "consoleLogs": []
-                    }))
+                    response_file.write_text(
+                        json.dumps(
+                            {
+                                "id": command_id,
+                                "status": "success",
+                                "action": "get-console-logs",
+                                "consoleLogs": [],
+                            }
+                        )
+                    )
                     return command_id
 
-                with patch('unity_command.write_command', side_effect=mock_write):
+                with patch("unity_command.write_command", side_effect=mock_write):
                     exit_code = main()
                     assert exit_code == EXIT_SUCCESS
 
             # Test upper boundary
-            argv = [
-                'unity_command.py', 'get-console-logs',
-                '--limit', '1000', '--timeout', '1'
-            ]
-            with patch('sys.argv', argv):
+            argv = ["unity_command.py", "get-console-logs", "--limit", "1000", "--timeout", "1"]
+            with patch("sys.argv", argv):
+
                 def mock_write_1000(action, params):
                     assert params.get("limit") == "1000"  # String for C# compatibility
                     command_id = "test-limit-1000"
                     response_file = tmp_path / f"response-{command_id}.json"
-                    response_file.write_text(json.dumps({
-                        "id": command_id,
-                        "status": "success",
-                        "action": "get-console-logs",
-                        "consoleLogs": []
-                    }))
+                    response_file.write_text(
+                        json.dumps(
+                            {
+                                "id": command_id,
+                                "status": "success",
+                                "action": "get-console-logs",
+                                "consoleLogs": [],
+                            }
+                        )
+                    )
                     return command_id
 
-                with patch('unity_command.write_command', side_effect=mock_write_1000):
+                with patch("unity_command.write_command", side_effect=mock_write_1000):
                     exit_code = main()
                     assert exit_code == EXIT_SUCCESS
 
@@ -1035,7 +1027,7 @@ class TestSecurityValidation:
         symlink_path = claude_dir / "unity"
         symlink_path.symlink_to(target_dir)
 
-        with patch('unity_command.UNITY_DIR', symlink_path):
+        with patch("unity_command.UNITY_DIR", symlink_path):
             with pytest.raises(UnityCommandError) as exc_info:
                 write_command("test", {})
 
@@ -1046,7 +1038,7 @@ class TestSecurityValidation:
         """Normal (non-symlink) directory should work fine"""
         unity_dir = tmp_path / ".claude" / "unity"
         # Don't create it - write_command should create it
-        with patch('unity_command.UNITY_DIR', unity_dir):
+        with patch("unity_command.UNITY_DIR", unity_dir):
             command_id = write_command("test-action", {"param": "value"})
 
             # Should succeed
