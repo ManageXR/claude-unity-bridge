@@ -148,49 +148,6 @@ class TestFormatEditorStatus:
 
     def test_editor_ready(self):
         response = {
-            "error": json.dumps(
-                {"isCompiling": False, "isUpdating": False, "isPlaying": False, "isPaused": False}
-            )
-        }
-        result = format_editor_status(response)
-
-        assert "Unity Editor Status:" in result
-        assert "✓ Ready" in result
-        assert "✏ Editing" in result
-
-    def test_editor_compiling(self):
-        response = {
-            "error": json.dumps(
-                {"isCompiling": True, "isUpdating": False, "isPlaying": False, "isPaused": False}
-            )
-        }
-        result = format_editor_status(response)
-
-        assert "⏳ Compiling..." in result
-
-    def test_editor_playing(self):
-        response = {
-            "error": json.dumps(
-                {"isCompiling": False, "isUpdating": False, "isPlaying": True, "isPaused": False}
-            )
-        }
-        result = format_editor_status(response)
-
-        assert "▶ Playing" in result
-
-    def test_editor_paused(self):
-        response = {
-            "error": json.dumps(
-                {"isCompiling": False, "isUpdating": False, "isPlaying": True, "isPaused": True}
-            )
-        }
-        result = format_editor_status(response)
-
-        assert "⏸ Paused" in result
-
-    def test_editor_status_new_format(self):
-        """Test new editorStatus field format (preferred)"""
-        response = {
             "editorStatus": {
                 "isCompiling": False,
                 "isUpdating": False,
@@ -204,8 +161,7 @@ class TestFormatEditorStatus:
         assert "✓ Ready" in result
         assert "✏ Editing" in result
 
-    def test_editor_status_new_format_compiling(self):
-        """Test new format with compiling state"""
+    def test_editor_compiling(self):
         response = {
             "editorStatus": {
                 "isCompiling": True,
@@ -218,28 +174,38 @@ class TestFormatEditorStatus:
 
         assert "⏳ Compiling..." in result
 
-    def test_editor_status_prefers_new_format(self):
-        """When both formats are present, editorStatus is preferred"""
+    def test_editor_playing(self):
         response = {
             "editorStatus": {
-                "isCompiling": True,  # New format says compiling
+                "isCompiling": False,
                 "isUpdating": False,
-                "isPlaying": False,
+                "isPlaying": True,
                 "isPaused": False,
-            },
-            "error": json.dumps(
-                {
-                    "isCompiling": False,  # Legacy format says ready
-                    "isUpdating": False,
-                    "isPlaying": False,
-                    "isPaused": False,
-                }
-            ),
+            }
         }
         result = format_editor_status(response)
 
-        # Should use new format (compiling)
-        assert "⏳ Compiling..." in result
+        assert "▶ Playing" in result
+
+    def test_editor_paused(self):
+        response = {
+            "editorStatus": {
+                "isCompiling": False,
+                "isUpdating": False,
+                "isPlaying": True,
+                "isPaused": True,
+            }
+        }
+        result = format_editor_status(response)
+
+        assert "⏸ Paused" in result
+
+    def test_editor_status_missing(self):
+        """Test response when editorStatus field is missing"""
+        response = {}
+        result = format_editor_status(response)
+
+        assert "Unknown" in result
 
 
 class TestFormatRefreshResults:
@@ -388,20 +354,18 @@ class TestIntegration:
             # Write command
             command_id = write_command("get-status", {})
 
-            # Simulate Unity response
+            # Simulate Unity response (new editorStatus format)
             response_data = {
                 "id": command_id,
                 "status": "success",
                 "action": "get-status",
                 "duration_ms": 10,
-                "error": json.dumps(
-                    {
-                        "isCompiling": False,
-                        "isUpdating": False,
-                        "isPlaying": False,
-                        "isPaused": False,
-                    }
-                ),
+                "editorStatus": {
+                    "isCompiling": False,
+                    "isUpdating": False,
+                    "isPlaying": False,
+                    "isPaused": False,
+                },
             }
             response_file = tmp_path / f"response-{command_id}.json"
             response_file.write_text(json.dumps(response_data))
@@ -493,17 +457,21 @@ class TestFormatEditorStatusEdgeCases:
 
     def test_editor_updating(self):
         response = {
-            "error": json.dumps(
-                {"isCompiling": False, "isUpdating": True, "isPlaying": False, "isPaused": False}
-            )
+            "editorStatus": {
+                "isCompiling": False,
+                "isUpdating": True,
+                "isPlaying": False,
+                "isPaused": False,
+            }
         }
         result = format_editor_status(response)
         assert "⏳ Yes" in result
 
-    def test_editor_invalid_json(self):
-        response = {"error": "not valid json"}
+    def test_editor_missing_status(self):
+        """Test response when editorStatus field is missing"""
+        response = {"status": "success"}
         result = format_editor_status(response)
-        assert "Unity Editor Status: not valid json" in result
+        assert "Unknown" in result
 
 
 class TestFormatConsoleLogsEdgeCases:
@@ -681,7 +649,7 @@ class TestExecuteCommand:
                 command_file.write_text(
                     json.dumps({"id": command_id, "action": action, "params": params})
                 )
-                # Immediately create the response
+                # Immediately create the response (new editorStatus format)
                 response_file = tmp_path / f"response-{command_id}.json"
                 response_file.write_text(
                     json.dumps(
@@ -690,14 +658,12 @@ class TestExecuteCommand:
                             "status": "success",
                             "action": "get-status",
                             "duration_ms": 10,
-                            "error": json.dumps(
-                                {
-                                    "isCompiling": False,
-                                    "isUpdating": False,
-                                    "isPlaying": False,
-                                    "isPaused": False,
-                                }
-                            ),
+                            "editorStatus": {
+                                "isCompiling": False,
+                                "isUpdating": False,
+                                "isPlaying": False,
+                                "isPaused": False,
+                            },
                         }
                     )
                 )

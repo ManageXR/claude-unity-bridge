@@ -1,12 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using MXR.ClaudeBridge.Models;
 using UnityEditor;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 namespace MXR.ClaudeBridge.Commands {
     public class GetConsoleLogsCommand : ICommand {
+        // Default limit when no limit parameter is provided
+        private const int DEFAULT_LOG_LIMIT = 50;
+
         // Log mode bitmasks from Unity's internal LogEntry structure
         // These values are used to determine log type from the mode field
         private const int LogModeError = 0x01;       // Error or Assert
@@ -19,26 +24,38 @@ namespace MXR.ClaudeBridge.Commands {
         private const int LogModeErrorMask = LogModeError | LogModeAssert | LogModeFatal;  // 0x07
         private const int LogModeExceptionOrWarningMask = LogModeException | LogModeWarning;  // 0x30
         public void Execute(CommandRequest request, Action<CommandResponse> onProgress, Action<CommandResponse> onComplete) {
+            var stopwatch = Stopwatch.StartNew();
+#if DEBUG
             Debug.Log("[ClaudeBridge] Getting console logs");
+#endif
 
-            // Parse limit parameter (default: 50)
-            // Supports both string and int formats for backwards compatibility
-            int limit = 50;
-            if (request.@params != null && !string.IsNullOrEmpty(request.@params.limit)) {
-                if (!int.TryParse(request.@params.limit, out limit)) {
-                    limit = 50;
+            try {
+                // Parse limit parameter
+                // Supports both string and int formats for backwards compatibility
+                int limit = DEFAULT_LOG_LIMIT;
+                if (request.@params != null && !string.IsNullOrEmpty(request.@params.limit)) {
+                    if (!int.TryParse(request.@params.limit, out limit)) {
+                        limit = DEFAULT_LOG_LIMIT;
+                    }
                 }
+
+                // Parse filter parameter (optional: "Log", "Warning", "Error")
+                string filter = request.@params?.filter;
+
+                var logs = GetConsoleLogs(limit, filter);
+
+                stopwatch.Stop();
+                var response = CommandResponse.Success(request.id, request.action, stopwatch.ElapsedMilliseconds);
+                response.consoleLogs = logs;
+
+                onComplete?.Invoke(response);
             }
-
-            // Parse filter parameter (optional: "Log", "Warning", "Error")
-            string filter = request.@params?.filter;
-
-            var logs = GetConsoleLogs(limit, filter);
-
-            var response = CommandResponse.Success(request.id, request.action, 0);
-            response.consoleLogs = logs;
-
-            onComplete?.Invoke(response);
+            catch (Exception e) {
+                stopwatch.Stop();
+                Debug.LogError($"[ClaudeBridge] Error in GetConsoleLogsCommand: {e.Message}");
+                var response = CommandResponse.Failure(request.id, request.action, stopwatch.ElapsedMilliseconds, e.Message);
+                onComplete?.Invoke(response);
+            }
         }
 
         private List<ConsoleLogEntry> GetConsoleLogs(int limit, string filter) {

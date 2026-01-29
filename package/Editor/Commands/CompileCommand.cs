@@ -20,7 +20,9 @@ namespace MXR.ClaudeBridge.Commands {
             _onComplete = onComplete;
             _hasErrors = false;
 
+#if DEBUG
             UnityEngine.Debug.Log("[ClaudeBridge] Starting script compilation");
+#endif
 
             var response = CommandResponse.Running(_commandId, request.action);
             onProgress?.Invoke(response);
@@ -45,7 +47,9 @@ namespace MXR.ClaudeBridge.Commands {
             CompilationPipeline.assemblyCompilationFinished -= OnAssemblyCompilationFinished;
 
             _stopwatch.Stop();
+#if DEBUG
             UnityEngine.Debug.Log($"[ClaudeBridge] Compilation finished - HasErrors: {_hasErrors}");
+#endif
 
             var response = _hasErrors
                 ? CommandResponse.Failure(_commandId, "compile", _stopwatch.ElapsedMilliseconds, "Compilation errors occurred")

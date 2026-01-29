@@ -80,12 +80,12 @@ namespace MXR.ClaudeBridge.Tests.Commands {
         }
 
         [Test]
-        public void Execute_DurationIsZero() {
+        public void Execute_HasDuration() {
             // Act
             _command.Execute(Request, Responses.OnProgress, Responses.OnComplete);
 
-            // Assert
-            Assert.That(Responses.CompleteResponse.duration_ms, Is.EqualTo(0), "Synchronous command should report 0ms duration");
+            // Assert - Duration is now measured
+            Assert.That(Responses.CompleteResponse.duration_ms, Is.GreaterThanOrEqualTo(0), "Duration should be a non-negative value");
         }
 
         #endregion

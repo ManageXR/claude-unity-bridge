@@ -98,13 +98,13 @@ namespace MXR.ClaudeBridge.Tests {
         }
 
         [Test]
-        public void ValidIdPattern_AcceptsErrorPrefixedIds() {
-            // Arrange - These are generated when parse fails
-            var errorId = "error-20250129123456";
+        public void ValidIdPattern_AcceptsFallbackGuidIds() {
+            // Arrange - These are generated when parse fails (now using GUID format)
+            var fallbackId = "550e8400-e29b-41d4-a716-446655440000";
 
             // Act & Assert
-            Assert.That(ValidIdPattern.IsMatch(errorId), Is.False,
-                "Error IDs with non-hex characters should be rejected by hex-only pattern");
+            Assert.That(ValidIdPattern.IsMatch(fallbackId), Is.True,
+                "Fallback IDs using GUID format should pass the hex-only pattern");
         }
 
         #endregion

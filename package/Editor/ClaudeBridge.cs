@@ -15,6 +15,10 @@ namespace MXR.ClaudeBridge {
         private static readonly Dictionary<string, ICommand> Commands;
         private static string _currentCommandId;
         private static bool _isProcessingCommand;
+        private static DateTime _commandStartTime;
+
+        // Auto-reset stuck commands after this timeout (5 minutes)
+        private const int COMMAND_TIMEOUT_SECONDS = 300;
 
         // Security: Only allow alphanumeric characters and hyphens in response IDs
         private static readonly Regex ValidIdPattern = new Regex(@"^[a-fA-F0-9\-]+$", RegexOptions.Compiled);
@@ -34,7 +38,9 @@ namespace MXR.ClaudeBridge {
             EnsureDirectoryExists();
             EditorApplication.update += PollForCommands;
 
+#if DEBUG
             Debug.Log($"[ClaudeBridge] Initialized - Watching: {CommandDir}");
+#endif
         }
 
         private static void EnsureDirectoryExists() {
@@ -44,11 +50,46 @@ namespace MXR.ClaudeBridge {
         }
 
         private static void PollForCommands() {
-            if (_isProcessingCommand) return;
             if (EditorApplication.isCompiling || EditorApplication.isUpdating) return;
             if (!File.Exists(CommandFilePath)) return;
 
+            // Auto-recover from stuck processing state
+            if (_isProcessingCommand) {
+                if ((DateTime.Now - _commandStartTime).TotalSeconds > COMMAND_TIMEOUT_SECONDS) {
+                    Debug.LogWarning($"[ClaudeBridge] Command {_currentCommandId} timed out after {COMMAND_TIMEOUT_SECONDS}s, resetting state");
+                    ResetProcessingState();
+                } else {
+                    // Bridge is busy - respond with error so client doesn't hang
+                    TryRespondBusy();
+                    return;
+                }
+            }
+
             ProcessCommand();
+        }
+
+        private static void TryRespondBusy() {
+            try {
+                var json = File.ReadAllText(CommandFilePath);
+                var request = JsonUtility.FromJson<CommandRequest>(json);
+
+                if (request != null && !string.IsNullOrEmpty(request.id)) {
+                    Debug.LogWarning($"[ClaudeBridge] Rejecting command {request.id} - bridge is busy processing {_currentCommandId}");
+                    WriteResponse(CommandResponse.Error(request.id, request.action ?? "unknown",
+                        $"Bridge is busy processing another command ({_currentCommandId}). Try again later."));
+                }
+
+                DeleteCommandFile();
+            }
+            catch (Exception e) {
+                Debug.LogError($"[ClaudeBridge] Error handling busy response: {e.Message}");
+                DeleteCommandFile();
+            }
+        }
+
+        private static void ResetProcessingState() {
+            _isProcessingCommand = false;
+            _currentCommandId = null;
         }
 
         private static void ProcessCommand() {
@@ -69,8 +110,11 @@ namespace MXR.ClaudeBridge {
 
                 _currentCommandId = request.id;
                 _isProcessingCommand = true;
+                _commandStartTime = DateTime.Now;
 
+#if DEBUG
                 Debug.Log($"[ClaudeBridge] Processing command: {request.action} (id: {request.id})");
+#endif
 
                 if (!Commands.TryGetValue(request.action, out var command)) {
                     Debug.LogError($"[ClaudeBridge] Unknown action: {request.action}");
@@ -88,8 +132,8 @@ namespace MXR.ClaudeBridge {
                 if (request != null) {
                     WriteResponse(CommandResponse.Error(request.id, request.action, e.Message));
                 } else {
-                    // Generate fallback response with error ID so Python client doesn't hang forever
-                    var fallbackId = $"error-{DateTime.Now:yyyyMMddHHmmss}";
+                    // Generate fallback response with valid hex-only GUID so it passes ValidIdPattern
+                    var fallbackId = Guid.NewGuid().ToString();
                     WriteResponse(CommandResponse.Error(fallbackId, "unknown", $"Failed to parse command: {e.Message}"));
                 }
 
@@ -117,8 +161,15 @@ namespace MXR.ClaudeBridge {
 
                 EnsureDirectoryExists();
                 var responsePath = Path.Combine(CommandDir, $"response-{response.id}.json");
+                var tempPath = responsePath + ".tmp";
                 var json = JsonUtility.ToJson(response, true);
-                File.WriteAllText(responsePath, json);
+
+                // Atomic write: write to temp file then rename
+                File.WriteAllText(tempPath, json);
+                if (File.Exists(responsePath)) {
+                    File.Delete(responsePath);
+                }
+                File.Move(tempPath, responsePath);
             }
             catch (Exception e) {
                 Debug.LogError($"[ClaudeBridge] Error writing response: {e.Message}");
@@ -155,6 +206,16 @@ namespace MXR.ClaudeBridge {
                         // Ignore errors during cleanup
                     }
                 }
+            }
+        }
+
+        [MenuItem("Tools/Claude Bridge/Reset Processing State")]
+        private static void ResetProcessingStateMenu() {
+            if (_isProcessingCommand) {
+                Debug.Log($"[ClaudeBridge] Manually resetting processing state (was processing: {_currentCommandId})");
+                ResetProcessingState();
+            } else {
+                Debug.Log("[ClaudeBridge] No command is currently being processed");
             }
         }
 

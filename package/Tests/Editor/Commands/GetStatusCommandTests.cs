@@ -39,32 +39,24 @@ namespace MXR.ClaudeBridge.Tests.Commands {
 
             // Assert
             Assert.That(Responses.CompleteResponse, Is.Not.Null, "Should call onComplete");
-            Assert.That(Responses.CompleteResponse.error, Is.Not.Null, "Should include status data in error field");
-            Assert.That(Responses.CompleteResponse.error, Is.Not.Empty, "Status data should not be empty");
-
-            // Verify it's valid JSON that can be deserialized
-            Assert.DoesNotThrow(() => {
-                JsonUtility.FromJson<EditorStatusData>(Responses.CompleteResponse.error);
-            }, "Error field should contain valid JSON");
+            Assert.That(Responses.CompleteResponse.editorStatus, Is.Not.Null, "Should include editorStatus in response");
         }
 
         [Test]
-        public void Execute_SerializesStatusAsJsonInErrorField() {
+        public void Execute_EditorStatusHasExpectedFields() {
             // Act
             _command.Execute(Request, Responses.OnProgress, Responses.OnComplete);
 
-            // Assert - Test JSON serialization logic
-            var statusJson = Responses.CompleteResponse.error;
-            var status = JsonUtility.FromJson<EditorStatusData>(statusJson);
+            // Assert - Test EditorStatus model has all fields
+            var status = Responses.CompleteResponse.editorStatus;
+            Assert.That(status, Is.Not.Null, "EditorStatus should not be null");
 
-            // Verify all expected fields are present in serialized JSON
+            // Serialize to JSON and verify field presence
+            var statusJson = JsonUtility.ToJson(status);
             Assert.That(statusJson, Does.Contain("isCompiling"), "JSON should contain isCompiling field");
             Assert.That(statusJson, Does.Contain("isUpdating"), "JSON should contain isUpdating field");
             Assert.That(statusJson, Does.Contain("isPlaying"), "JSON should contain isPlaying field");
             Assert.That(statusJson, Does.Contain("isPaused"), "JSON should contain isPaused field");
-
-            // Verify deserialized object has expected properties
-            Assert.That(status, Is.Not.Null, "Status should deserialize successfully");
         }
 
         [Test]
@@ -92,12 +84,12 @@ namespace MXR.ClaudeBridge.Tests.Commands {
         }
 
         [Test]
-        public void Execute_ResponseDurationIsZero() {
+        public void Execute_ResponseHasDuration() {
             // Act
             _command.Execute(Request, Responses.OnProgress, Responses.OnComplete);
 
-            // Assert
-            Assert.That(Responses.CompleteResponse.duration_ms, Is.EqualTo(0), "Synchronous command should report 0ms duration");
+            // Assert - Duration is now measured (should be very small for this fast command)
+            Assert.That(Responses.CompleteResponse.duration_ms, Is.GreaterThanOrEqualTo(0), "Duration should be a non-negative value");
         }
 
         [Test]
@@ -152,27 +144,13 @@ namespace MXR.ClaudeBridge.Tests.Commands {
         }
 
         [Test]
-        public void Execute_MaintainsBackwardsCompatibility() {
+        public void Execute_DoesNotSetErrorField() {
             // Act
             _command.Execute(Request, Responses.OnProgress, Responses.OnComplete);
 
-            // Assert - Both old (error) and new (editorStatus) formats should be present
-            Assert.That(Responses.CompleteResponse.error, Is.Not.Null,
-                "Should still populate error field for backwards compatibility");
-            Assert.That(Responses.CompleteResponse.editorStatus, Is.Not.Null,
-                "Should also populate new editorStatus field");
-        }
-
-        /// <summary>
-        /// Test data structure matching GetStatusCommand's internal EditorStatus class.
-        /// Used for deserializing and validating JSON responses.
-        /// </summary>
-        [System.Serializable]
-        private class EditorStatusData {
-            public bool isCompiling;
-            public bool isUpdating;
-            public bool isPlaying;
-            public bool isPaused;
+            // Assert - error field should be null/empty for success responses
+            Assert.That(Responses.CompleteResponse.error, Is.Null.Or.Empty,
+                "Success response should not have error field set");
         }
     }
 }

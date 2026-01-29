@@ -287,16 +287,10 @@ def format_console_logs(response: Dict[str, Any]) -> str:
 
 def format_editor_status(response: Dict[str, Any]) -> str:
     """Format get-status response"""
-    # Prefer editorStatus field (new format), fall back to error field (legacy format)
     status = response.get("editorStatus")
 
     if status is None:
-        # Fallback: parse from error field for backwards compatibility
-        error = response.get("error", "{}")
-        try:
-            status = json.loads(error)
-        except json.JSONDecodeError:
-            return f"Unity Editor Status: {error}"
+        return "Unity Editor Status: Unknown (missing editorStatus field)"
 
     is_compiling = status.get("isCompiling", False)
     is_updating = status.get("isUpdating", False)

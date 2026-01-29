@@ -14,6 +14,7 @@ namespace MXR.ClaudeBridge.Commands {
 
             var api = ScriptableObject.CreateInstance<TestRunnerApi>();
             api.RegisterCallbacks(callbacks);
+            callbacks.SetApi(api);
 
             var testMode = GetTestMode(request.@params?.testMode);
             var filter = new Filter {
@@ -24,7 +25,9 @@ namespace MXR.ClaudeBridge.Commands {
                 filter.testNames = request.@params.filter.Split(';');
             }
 
+#if DEBUG
             Debug.Log($"[ClaudeBridge] Running tests - Mode: {testMode}, Filter: {request.@params?.filter ?? "none"}");
+#endif
 
             var response = CommandResponse.Running(request.id, request.action);
             onProgress?.Invoke(response);
@@ -50,6 +53,7 @@ namespace MXR.ClaudeBridge.Commands {
             private readonly Action<CommandResponse> _onProgress;
             private readonly Action<CommandResponse> _onComplete;
             private readonly List<TestFailure> _failures = new List<TestFailure>();
+            private TestRunnerApi _api;
             private int _passed;
             private int _failed;
             private int _skipped;
@@ -64,9 +68,23 @@ namespace MXR.ClaudeBridge.Commands {
                 _onComplete = onComplete;
             }
 
+            public void SetApi(TestRunnerApi api) {
+                _api = api;
+            }
+
+            private void CleanupApi() {
+                if (_api != null) {
+                    _api.UnregisterCallbacks(this);
+                    UnityEngine.Object.DestroyImmediate(_api);
+                    _api = null;
+                }
+            }
+
             public void RunStarted(ITestAdaptor testsToRun) {
                 _total = CountTests(testsToRun);
+#if DEBUG
                 Debug.Log($"[ClaudeBridge] Test run started - {_total} tests");
+#endif
 
                 var response = CommandResponse.Running(_commandId, "run-tests");
                 response.progress = new ProgressInfo {
@@ -78,7 +96,9 @@ namespace MXR.ClaudeBridge.Commands {
 
             public void RunFinished(ITestResultAdaptor result) {
                 _stopwatch.Stop();
+#if DEBUG
                 Debug.Log($"[ClaudeBridge] Test run finished - Passed: {_passed}, Failed: {_failed}, Skipped: {_skipped}");
+#endif
 
                 var response = _failed > 0
                     ? CommandResponse.Failure(_commandId, "run-tests", _stopwatch.ElapsedMilliseconds)
@@ -92,6 +112,9 @@ namespace MXR.ClaudeBridge.Commands {
                 };
 
                 _onComplete?.Invoke(response);
+
+                // Clean up the TestRunnerApi instance to prevent memory leak
+                CleanupApi();
             }
 
             public void TestStarted(ITestAdaptor test) {
