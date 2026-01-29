@@ -23,9 +23,9 @@ repos:
     rev: v4.6.0
     hooks:
       - id: trailing-whitespace
-        exclude: ^(package/|TestProject/)
+        exclude: ^(package/|\.TestProject/)
       - id: end-of-file-fixer
-        exclude: ^(package/|TestProject/)
+        exclude: ^(package/|\.TestProject/)
       - id: check-yaml
       - id: check-json
         exclude: ^TestProject/
