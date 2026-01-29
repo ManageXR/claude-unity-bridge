@@ -12,7 +12,7 @@ import sys
 import time
 import uuid
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 # Constants
 UNITY_DIR = Path.cwd() / ".claude" / "unity"
@@ -20,6 +20,8 @@ DEFAULT_TIMEOUT = 30
 MIN_SLEEP = 0.1
 MAX_SLEEP = 1.0
 SLEEP_MULTIPLIER = 1.5
+MIN_LIMIT = 1
+MAX_LIMIT = 1000
 
 # Exit codes
 EXIT_SUCCESS = 0
@@ -63,6 +65,10 @@ def write_command(action: str, params: Dict[str, Any]) -> str:
         "params": params
     }
 
+    # Security: Ensure UNITY_DIR is not a symlink (prevent symlink attacks)
+    if UNITY_DIR.exists() and UNITY_DIR.is_symlink():
+        raise UnityCommandError("Security error: .claude/unity cannot be a symlink")
+
     # Ensure directory exists
     try:
         UNITY_DIR.mkdir(parents=True, exist_ok=True)
@@ -81,7 +87,7 @@ def write_command(action: str, params: Dict[str, Any]) -> str:
         if temp_file.exists():
             try:
                 temp_file.unlink()
-            except:
+            except Exception:
                 pass
         raise UnityCommandError(f"Failed to write command file: {e}")
 
@@ -123,14 +129,14 @@ def wait_for_response(command_id: str, timeout: int, verbose: bool = False) -> D
             except json.JSONDecodeError:
                 # Might have caught it mid-write, retry once
                 if verbose:
-                    print(f"Warning: Failed to parse response, retrying...", file=sys.stderr)
+                    print("Warning: Failed to parse response, retrying...", file=sys.stderr)
                 time.sleep(0.2)
                 try:
                     response_text = response_file.read_text()
                     return json.loads(response_text)
                 except json.JSONDecodeError as e:
                     # Log raw response for debugging
-                    print(f"Error: Invalid JSON in response file", file=sys.stderr)
+                    print("Error: Invalid JSON in response file", file=sys.stderr)
                     print(f"Raw response: {response_text}", file=sys.stderr)
                     raise UnityCommandError(f"Failed to parse response JSON: {e}")
             except Exception as e:
@@ -245,7 +251,8 @@ def format_console_logs(response: Dict[str, Any]) -> str:
     log_filter = response.get("params", {}).get("filter", "")
     limit = len(logs)
 
-    lines = [f"Console Logs (last {limit}" + (f", filtered by {log_filter}" if log_filter else "") + "):"]
+    filter_suffix = f", filtered by {log_filter}" if log_filter else ""
+    lines = [f"Console Logs (last {limit}{filter_suffix}):"]
     lines.append("")
 
     for log in logs:
@@ -281,13 +288,16 @@ def format_console_logs(response: Dict[str, Any]) -> str:
 
 def format_editor_status(response: Dict[str, Any]) -> str:
     """Format get-status response"""
-    # Status is returned in the error field as JSON
-    error = response.get("error", "{}")
+    # Prefer editorStatus field (new format), fall back to error field (legacy format)
+    status = response.get("editorStatus")
 
-    try:
-        status = json.loads(error)
-    except json.JSONDecodeError:
-        return f"Unity Editor Status: {error}"
+    if status is None:
+        # Fallback: parse from error field for backwards compatibility
+        error = response.get("error", "{}")
+        try:
+            status = json.loads(error)
+        except json.JSONDecodeError:
+            return f"Unity Editor Status: {error}"
 
     is_compiling = status.get("isCompiling", False)
     is_updating = status.get("isUpdating", False)
@@ -503,6 +513,15 @@ Examples:
 
     args = parser.parse_args()
 
+    # Validate timeout
+    if args.timeout <= 0:
+        parser.error("--timeout must be a positive integer")
+
+    # Validate limit if provided
+    if args.limit is not None:
+        if args.limit < MIN_LIMIT or args.limit > MAX_LIMIT:
+            parser.error(f"--limit must be between {MIN_LIMIT} and {MAX_LIMIT}")
+
     # Build parameters based on command
     params = {}
 
@@ -513,7 +532,8 @@ Examples:
             params["filter"] = args.filter
 
     elif args.command == "get-console-logs":
-        if args.limit:
+        if args.limit is not None:
+            # Send as string for compatibility with C# JsonUtility which expects string
             params["limit"] = str(args.limit)
         if args.filter:
             params["filter"] = args.filter

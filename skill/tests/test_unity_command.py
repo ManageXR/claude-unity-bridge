@@ -6,17 +6,16 @@ Run with: pytest skill/tests/test_unity_command.py
 
 import json
 import sys
-import tempfile
 import time
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from unity_command import (
+from unity_command import (  # noqa: E402
     format_response,
     format_test_results,
     format_compile_results,
@@ -33,10 +32,11 @@ from unity_command import (
     UnityCommandError,
     CommandTimeoutError,
     UnityNotRunningError,
-    UNITY_DIR,
     EXIT_SUCCESS,
     EXIT_ERROR,
-    EXIT_TIMEOUT
+    EXIT_TIMEOUT,
+    MIN_LIMIT,
+    MAX_LIMIT,
 )
 
 
@@ -102,10 +102,11 @@ class TestFormatCompileResults:
         assert "Duration: 2.30s" in result
 
     def test_compile_failure(self):
-        response = {
-            "status": "failure",
-            "error": "Assets/Scripts/Player.cs(25,10): error CS0103: The name 'invalidVar' does not exist"
-        }
+        error_msg = (
+            "Assets/Scripts/Player.cs(25,10): "
+            "error CS0103: The name 'invalidVar' does not exist"
+        )
+        response = {"status": "failure", "error": error_msg}
         result = format_compile_results(response, "failure", 1.8)
 
         assert "✗ Compilation Failed" in result
@@ -204,6 +205,57 @@ class TestFormatEditorStatus:
         result = format_editor_status(response)
 
         assert "⏸ Paused" in result
+
+    def test_editor_status_new_format(self):
+        """Test new editorStatus field format (preferred)"""
+        response = {
+            "editorStatus": {
+                "isCompiling": False,
+                "isUpdating": False,
+                "isPlaying": False,
+                "isPaused": False
+            }
+        }
+        result = format_editor_status(response)
+
+        assert "Unity Editor Status:" in result
+        assert "✓ Ready" in result
+        assert "✏ Editing" in result
+
+    def test_editor_status_new_format_compiling(self):
+        """Test new format with compiling state"""
+        response = {
+            "editorStatus": {
+                "isCompiling": True,
+                "isUpdating": False,
+                "isPlaying": False,
+                "isPaused": False
+            }
+        }
+        result = format_editor_status(response)
+
+        assert "⏳ Compiling..." in result
+
+    def test_editor_status_prefers_new_format(self):
+        """When both formats are present, editorStatus is preferred"""
+        response = {
+            "editorStatus": {
+                "isCompiling": True,  # New format says compiling
+                "isUpdating": False,
+                "isPlaying": False,
+                "isPaused": False
+            },
+            "error": json.dumps({
+                "isCompiling": False,  # Legacy format says ready
+                "isUpdating": False,
+                "isPlaying": False,
+                "isPaused": False
+            })
+        }
+        result = format_editor_status(response)
+
+        # Should use new format (compiling)
+        assert "⏳ Compiling..." in result
 
 
 class TestFormatRefreshResults:
@@ -750,7 +802,8 @@ class TestMainFunction:
 
     def test_main_run_tests(self, tmp_path):
         with patch('unity_command.UNITY_DIR', tmp_path):
-            with patch('sys.argv', ['unity_command.py', 'run-tests', '--mode', 'EditMode', '--timeout', '1']):
+            argv = ['unity_command.py', 'run-tests', '--mode', 'EditMode', '--timeout', '1']
+            with patch('sys.argv', argv):
                 # Create response immediately
                 def mock_write(action, params):
                     command_id = "test-main-123"
@@ -770,7 +823,11 @@ class TestMainFunction:
 
     def test_main_get_console_logs(self, tmp_path):
         with patch('unity_command.UNITY_DIR', tmp_path):
-            with patch('sys.argv', ['unity_command.py', 'get-console-logs', '--limit', '10', '--filter', 'Error', '--timeout', '1']):
+            argv = [
+                'unity_command.py', 'get-console-logs',
+                '--limit', '10', '--filter', 'Error', '--timeout', '1'
+            ]
+            with patch('sys.argv', argv):
                 def mock_write(action, params):
                     assert params.get("limit") == "10"
                     assert params.get("filter") == "Error"
@@ -839,6 +896,163 @@ class TestMainFunction:
                     assert exit_code == EXIT_ERROR
                     captured = capsys.readouterr()
                     assert "Unexpected error" in captured.err
+
+
+class TestArgumentValidation:
+    """Test command-line argument validation"""
+
+    def test_timeout_zero_rejected(self, tmp_path, capsys):
+        """--timeout 0 should fail validation"""
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            with patch('sys.argv', ['unity_command.py', 'get-status', '--timeout', '0']):
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 2  # argparse error exit code
+
+                captured = capsys.readouterr()
+                assert "must be a positive integer" in captured.err
+
+    def test_timeout_negative_rejected(self, tmp_path, capsys):
+        """--timeout -5 should fail validation"""
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            with patch('sys.argv', ['unity_command.py', 'compile', '--timeout', '-5']):
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 2
+
+                captured = capsys.readouterr()
+                assert "must be a positive integer" in captured.err
+
+    def test_limit_zero_rejected(self, tmp_path, capsys):
+        """--limit 0 should fail validation"""
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            argv = [
+                'unity_command.py', 'get-console-logs',
+                '--limit', '0', '--timeout', '1'
+            ]
+            with patch('sys.argv', argv):
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 2
+
+                captured = capsys.readouterr()
+                expected_msg = f"--limit must be between {MIN_LIMIT} and {MAX_LIMIT}"
+                assert expected_msg in captured.err
+
+    def test_limit_negative_rejected(self, tmp_path, capsys):
+        """--limit -1 should fail validation"""
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            argv = [
+                'unity_command.py', 'get-console-logs',
+                '--limit', '-1', '--timeout', '1'
+            ]
+            with patch('sys.argv', argv):
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 2
+
+                captured = capsys.readouterr()
+                assert "--limit must be between" in captured.err
+
+    def test_limit_too_large_rejected(self, tmp_path, capsys):
+        """--limit 1001 should fail validation (exceeds MAX_LIMIT)"""
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            argv = [
+                'unity_command.py', 'get-console-logs',
+                '--limit', '1001', '--timeout', '1'
+            ]
+            with patch('sys.argv', argv):
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 2
+
+                captured = capsys.readouterr()
+                expected_msg = f"--limit must be between {MIN_LIMIT} and {MAX_LIMIT}"
+                assert expected_msg in captured.err
+
+    def test_limit_valid_boundary(self, tmp_path):
+        """--limit 1 and --limit 1000 should be accepted"""
+        with patch('unity_command.UNITY_DIR', tmp_path):
+            # Test lower boundary
+            argv = [
+                'unity_command.py', 'get-console-logs',
+                '--limit', '1', '--timeout', '1'
+            ]
+            with patch('sys.argv', argv):
+                def mock_write(action, params):
+                    assert params.get("limit") == "1"  # String for C# compatibility
+                    command_id = "test-limit-1"
+                    response_file = tmp_path / f"response-{command_id}.json"
+                    response_file.write_text(json.dumps({
+                        "id": command_id,
+                        "status": "success",
+                        "action": "get-console-logs",
+                        "consoleLogs": []
+                    }))
+                    return command_id
+
+                with patch('unity_command.write_command', side_effect=mock_write):
+                    exit_code = main()
+                    assert exit_code == EXIT_SUCCESS
+
+            # Test upper boundary
+            argv = [
+                'unity_command.py', 'get-console-logs',
+                '--limit', '1000', '--timeout', '1'
+            ]
+            with patch('sys.argv', argv):
+                def mock_write_1000(action, params):
+                    assert params.get("limit") == "1000"  # String for C# compatibility
+                    command_id = "test-limit-1000"
+                    response_file = tmp_path / f"response-{command_id}.json"
+                    response_file.write_text(json.dumps({
+                        "id": command_id,
+                        "status": "success",
+                        "action": "get-console-logs",
+                        "consoleLogs": []
+                    }))
+                    return command_id
+
+                with patch('unity_command.write_command', side_effect=mock_write_1000):
+                    exit_code = main()
+                    assert exit_code == EXIT_SUCCESS
+
+
+class TestSecurityValidation:
+    """Test security-related validations"""
+
+    def test_symlink_detection(self, tmp_path):
+        """Symlinked .claude/unity directory should raise security error"""
+        # Create a target directory for the symlink
+        target_dir = tmp_path / "real_dir"
+        target_dir.mkdir()
+
+        # Create the .claude directory
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+
+        # Create a symlink for the unity directory
+        symlink_path = claude_dir / "unity"
+        symlink_path.symlink_to(target_dir)
+
+        with patch('unity_command.UNITY_DIR', symlink_path):
+            with pytest.raises(UnityCommandError) as exc_info:
+                write_command("test", {})
+
+            assert "symlink" in str(exc_info.value).lower()
+            assert "security" in str(exc_info.value).lower()
+
+    def test_normal_directory_allowed(self, tmp_path):
+        """Normal (non-symlink) directory should work fine"""
+        unity_dir = tmp_path / ".claude" / "unity"
+        # Don't create it - write_command should create it
+        with patch('unity_command.UNITY_DIR', unity_dir):
+            command_id = write_command("test-action", {"param": "value"})
+
+            # Should succeed
+            assert len(command_id) == 36
+            assert unity_dir.exists()
+            assert not unity_dir.is_symlink()
 
 
 if __name__ == "__main__":
