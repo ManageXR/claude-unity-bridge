@@ -1,7 +1,7 @@
 # Claude Unity Bridge
 
 ![CI](https://github.com/ManageXR/claude-unity-bridge/actions/workflows/test-skill.yml/badge.svg)
-[![codecov](https://codecov.io/gh/ManageXR/claude-unity-bridge/graph/badge.svg?branch=main)](https://codecov.io/gh/ManageXR/claude-unity-bridge)
+[![codecov](https://codecov.io/gh/ManageXR/claude-unity-bridge/graph/badge.svg?token=3PHF2GXHON)](https://codecov.io/gh/ManageXR/claude-unity-bridge)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Unity 2021.3+](https://img.shields.io/badge/Unity-2021.3%2B-black.svg)
 
