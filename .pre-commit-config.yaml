@@ -1,0 +1,43 @@
+# Pre-commit hooks configuration for Claude Unity Bridge
+# See https://pre-commit.com for more information
+
+repos:
+  # Python formatting with black
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+        files: ^skill/
+        args: [--line-length=100]
+
+  # Python linting with flake8
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        files: ^skill/
+        args: [--max-line-length=100, --extend-ignore=E203]
+
+  # General file hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(package/|TestProject/)
+      - id: end-of-file-fixer
+        exclude: ^(package/|TestProject/)
+      - id: check-yaml
+      - id: check-json
+        exclude: ^TestProject/
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: check-merge-conflict
+
+  # Check for common Python issues
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
+    hooks:
+      - id: python-check-blanket-noqa
+        files: ^skill/
+      - id: python-check-blanket-type-ignore
+        files: ^skill/

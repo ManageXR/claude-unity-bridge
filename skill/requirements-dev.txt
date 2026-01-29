@@ -1,5 +1,13 @@
 # Development dependencies for Unity Bridge skill
+# Pin exact versions for reproducible builds
 
 # Testing
-pytest>=7.0.0
-pytest-cov>=4.0.0
+pytest==7.4.4
+pytest-cov==4.1.0
+
+# Linting and formatting (matching pre-commit versions)
+black==24.4.2
+flake8==7.0.0
+
+# Pre-commit hook framework
+pre-commit==3.7.0

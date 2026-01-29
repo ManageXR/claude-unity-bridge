@@ -30,9 +30,24 @@ This is a Unity package (`com.managexr.claude-bridge`) that enables Claude Code 
 
 ### Dependencies
 - **Unity**: 2021.3 or later (no additional Unity dependencies)
-- **Python**: 3.8+ for the skill script
+- **Python**: 3.8+ for the skill script (3.12 supported)
 - **pytest**: For testing the Python script
+- **black/flake8**: For code formatting and linting
+- **pre-commit**: For git hooks
 - **GitHub Actions**: CI/CD for skill tests
+
+### Setting Up Development Environment
+```bash
+# Install development dependencies
+cd skill
+pip install -r requirements-dev.txt
+
+# Install pre-commit hooks (recommended)
+pre-commit install
+
+# Run pre-commit on all files (first time)
+pre-commit run --all-files
+```
 
 ## Commands You Can Use
 
