@@ -1,21 +1,17 @@
 """
-Tests for Unity Bridge command script.
+Tests for Unity Bridge CLI.
 
-Run with: pytest skill/tests/test_unity_command.py
+Run with: pytest skill/tests/test_cli.py
 """
 
 import json
-import sys
 import time
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-
-from unity_command import (  # noqa: E402
+from claude_unity_bridge.cli import (
     format_response,
     format_test_results,
     format_compile_results,
@@ -28,6 +24,7 @@ from unity_command import (  # noqa: E402
     cleanup_old_responses,
     cleanup_response_file,
     execute_command,
+    execute_health_check,
     main,
     UnityCommandError,
     CommandTimeoutError,
@@ -252,7 +249,7 @@ class TestWriteCommand:
 
     def test_write_command_creates_file(self, tmp_path):
         # Patch UNITY_DIR to use temp directory
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             command_id = write_command("test-action", {"param": "value"})
 
             # Check UUID format
@@ -271,7 +268,7 @@ class TestWriteCommand:
 
     def test_write_command_creates_directory(self, tmp_path):
         unity_dir = tmp_path / "nested" / "unity"
-        with patch("unity_command.UNITY_DIR", unity_dir):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", unity_dir):
             write_command("test", {})
             assert unity_dir.exists()
 
@@ -280,7 +277,7 @@ class TestWaitForResponse:
     """Test response waiting and polling"""
 
     def test_wait_for_response_success(self, tmp_path):
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             command_id = "test-123"
             response_data = {"id": command_id, "status": "success", "action": "test"}
 
@@ -293,7 +290,7 @@ class TestWaitForResponse:
             assert result == response_data
 
     def test_wait_for_response_timeout(self, tmp_path):
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             # Create directory to simulate Unity running
             tmp_path.mkdir(exist_ok=True)
 
@@ -305,7 +302,7 @@ class TestWaitForResponse:
     def test_wait_for_response_unity_not_running(self, tmp_path):
         # Don't create directory to simulate Unity not running
         nonexistent_dir = tmp_path / "does-not-exist"
-        with patch("unity_command.UNITY_DIR", nonexistent_dir):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", nonexistent_dir):
             with pytest.raises(UnityNotRunningError) as exc_info:
                 wait_for_response("test-id", timeout=1)
 
@@ -316,7 +313,7 @@ class TestCleanupOldResponses:
     """Test cleanup functionality"""
 
     def test_cleanup_old_responses(self, tmp_path):
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             # Create some response files
             old_file = tmp_path / "response-old-123.json"
             recent_file = tmp_path / "response-recent-456.json"
@@ -341,7 +338,7 @@ class TestCleanupOldResponses:
     def test_cleanup_no_directory(self, tmp_path):
         # Should not raise error if directory doesn't exist
         nonexistent_dir = tmp_path / "does-not-exist"
-        with patch("unity_command.UNITY_DIR", nonexistent_dir):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", nonexistent_dir):
             cleanup_old_responses()  # Should not raise
 
 
@@ -350,7 +347,7 @@ class TestIntegration:
 
     def test_full_command_cycle(self, tmp_path):
         """Test writing command, waiting for response, and formatting"""
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             # Write command
             command_id = write_command("get-status", {})
 
@@ -499,7 +496,7 @@ class TestCleanupResponseFile:
     """Test cleanup_response_file function"""
 
     def test_cleanup_existing_file(self, tmp_path):
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             command_id = "test-cleanup-123"
             response_file = tmp_path / f"response-{command_id}.json"
             response_file.write_text('{"id": "test"}')
@@ -508,12 +505,12 @@ class TestCleanupResponseFile:
             assert not response_file.exists()
 
     def test_cleanup_nonexistent_file(self, tmp_path):
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             # Should not raise error
             cleanup_response_file("nonexistent-id")
 
     def test_cleanup_with_verbose(self, tmp_path, capsys):
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             command_id = "test-verbose-123"
             response_file = tmp_path / f"response-{command_id}.json"
             response_file.write_text('{"id": "test"}')
@@ -528,7 +525,7 @@ class TestCleanupOldResponsesVerbose:
     """Test cleanup_old_responses verbose mode"""
 
     def test_cleanup_verbose_output(self, tmp_path, capsys):
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             old_file = tmp_path / "response-old-verbose.json"
             old_file.write_text('{"id": "old"}')
 
@@ -552,14 +549,14 @@ class TestWriteCommandErrors:
         blocking_file.write_text("blocking")
         unity_dir = blocking_file / "unity"
 
-        with patch("unity_command.UNITY_DIR", unity_dir):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", unity_dir):
             with pytest.raises(UnityCommandError) as exc_info:
                 write_command("test", {})
             assert "Failed to create Unity directory" in str(exc_info.value)
 
     def test_write_command_file_write_failure(self, tmp_path):
         # Make the directory read-only to cause write failure
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             tmp_path.mkdir(parents=True, exist_ok=True)
             # Mock Path.write_text to raise an exception
             with patch.object(Path, "write_text", side_effect=PermissionError("Permission denied")):
@@ -572,7 +569,7 @@ class TestWaitForResponseEdgeCases:
     """Test edge cases in wait_for_response"""
 
     def test_wait_verbose_polling(self, tmp_path, capsys):
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             command_id = "test-verbose-poll"
             response_data = {"id": command_id, "status": "success"}
 
@@ -594,7 +591,7 @@ class TestWaitForResponseEdgeCases:
 
     def test_wait_json_decode_error_recovery(self, tmp_path, capsys):
         """Test that mid-write JSON errors are retried once"""
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             command_id = "test-json-error"
             response_file = tmp_path / f"response-{command_id}.json"
 
@@ -616,7 +613,7 @@ class TestWaitForResponseEdgeCases:
 
     def test_wait_json_decode_error_persistent(self, tmp_path, capsys):
         """Test that persistent JSON errors raise an exception"""
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             command_id = "test-json-persistent"
             response_file = tmp_path / f"response-{command_id}.json"
 
@@ -635,7 +632,7 @@ class TestExecuteCommand:
     """Test execute_command function"""
 
     def test_execute_command_success(self, tmp_path):
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             # Write command file manually
             import uuid
 
@@ -669,12 +666,12 @@ class TestExecuteCommand:
                 )
                 return command_id
 
-            with patch("unity_command.write_command", side_effect=mock_write):
+            with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write):
                 result = execute_command("get-status", {}, timeout=5)
                 assert "Unity Editor Status" in result
 
     def test_execute_command_with_cleanup(self, tmp_path):
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             # Create an old response file
             tmp_path.mkdir(parents=True, exist_ok=True)
             old_file = tmp_path / "response-old-exec.json"
@@ -702,14 +699,14 @@ class TestExecuteCommand:
                 )
                 return command_id
 
-            with patch("unity_command.write_command", side_effect=mock_write):
+            with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write):
                 result = execute_command("compile", {}, timeout=5, cleanup=True)
                 assert "Compilation Successful" in result
                 # Old file should be cleaned up
                 assert not old_file.exists()
 
     def test_execute_command_verbose(self, tmp_path, capsys):
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             import uuid
 
             command_id = str(uuid.uuid4())
@@ -729,7 +726,7 @@ class TestExecuteCommand:
                 )
                 return command_id
 
-            with patch("unity_command.write_command", side_effect=mock_write):
+            with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write):
                 result = execute_command("refresh", {}, timeout=5, verbose=True)
                 assert "Asset Database Refreshed" in result
 
@@ -739,18 +736,82 @@ class TestExecuteCommand:
                 assert "Waiting for response" in captured.err
 
 
+class TestHealthCheck:
+    """Test health-check command"""
+
+    def test_health_check_no_directory(self, tmp_path, capsys):
+        """Health check fails when Unity directory doesn't exist"""
+        nonexistent_dir = tmp_path / "does-not-exist"
+        with patch("claude_unity_bridge.cli.UNITY_DIR", nonexistent_dir):
+            result = execute_health_check(timeout=5, verbose=False)
+            assert result == EXIT_ERROR
+
+            captured = capsys.readouterr()
+            assert "Unity Bridge not detected" in captured.out
+            assert "Directory not found" in captured.out
+
+    def test_health_check_success(self, tmp_path, capsys):
+        """Health check succeeds when Unity responds"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            tmp_path.mkdir(parents=True, exist_ok=True)
+
+            # Mock execute_command to return success
+            def mock_execute(action, params, timeout, verbose):
+                return "Unity Editor Status:\n  - Compilation: ✓ Ready"
+
+            with patch("claude_unity_bridge.cli.execute_command", side_effect=mock_execute):
+                result = execute_health_check(timeout=5, verbose=False)
+                assert result == EXIT_SUCCESS
+
+                captured = capsys.readouterr()
+                assert "Bridge directory exists" in captured.out
+                assert "Unity Editor is responding" in captured.out
+
+    def test_health_check_unity_not_responding(self, tmp_path, capsys):
+        """Health check fails when Unity doesn't respond"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            tmp_path.mkdir(parents=True, exist_ok=True)
+
+            # Mock execute_command to raise UnityNotRunningError
+            with patch(
+                "claude_unity_bridge.cli.execute_command",
+                side_effect=UnityNotRunningError("Unity not running"),
+            ):
+                result = execute_health_check(timeout=5, verbose=False)
+                assert result == EXIT_ERROR
+
+                captured = capsys.readouterr()
+                assert "Unity Editor not responding" in captured.out
+
+    def test_health_check_timeout(self, tmp_path, capsys):
+        """Health check returns timeout when Unity times out"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            tmp_path.mkdir(parents=True, exist_ok=True)
+
+            # Mock execute_command to raise CommandTimeoutError
+            with patch(
+                "claude_unity_bridge.cli.execute_command",
+                side_effect=CommandTimeoutError("Timeout"),
+            ):
+                result = execute_health_check(timeout=5, verbose=False)
+                assert result == EXIT_TIMEOUT
+
+                captured = capsys.readouterr()
+                assert "Unity Editor timed out" in captured.out
+
+
 class TestMainFunction:
     """Test main() CLI function"""
 
     def test_main_help(self, capsys):
-        with patch("sys.argv", ["unity_command.py", "--help"]):
+        with patch("sys.argv", ["unity-bridge", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
 
     def test_main_run_tests(self, tmp_path):
-        with patch("unity_command.UNITY_DIR", tmp_path):
-            argv = ["unity_command.py", "run-tests", "--mode", "EditMode", "--timeout", "1"]
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            argv = ["unity-bridge", "run-tests", "--mode", "EditMode", "--timeout", "1"]
             with patch("sys.argv", argv):
                 # Create response immediately
                 def mock_write(action, params):
@@ -769,14 +830,14 @@ class TestMainFunction:
                     )
                     return command_id
 
-                with patch("unity_command.write_command", side_effect=mock_write):
+                with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write):
                     exit_code = main()
                     assert exit_code == EXIT_SUCCESS
 
     def test_main_get_console_logs(self, tmp_path):
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             argv = [
-                "unity_command.py",
+                "unity-bridge",
                 "get-console-logs",
                 "--limit",
                 "10",
@@ -804,25 +865,40 @@ class TestMainFunction:
                     )
                     return command_id
 
-                with patch("unity_command.write_command", side_effect=mock_write):
+                with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write):
+                    exit_code = main()
+                    assert exit_code == EXIT_SUCCESS
+
+    def test_main_health_check(self, tmp_path, capsys):
+        """Test health-check via main()"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            tmp_path.mkdir(parents=True, exist_ok=True)
+
+            argv = ["unity-bridge", "health-check", "--timeout", "5"]
+            with patch("sys.argv", argv):
+
+                def mock_execute(action, params, timeout, verbose):
+                    return "Unity Editor Status:\n  - Compilation: ✓ Ready"
+
+                with patch("claude_unity_bridge.cli.execute_command", side_effect=mock_execute):
                     exit_code = main()
                     assert exit_code == EXIT_SUCCESS
 
     def test_main_timeout_error(self, tmp_path):
-        with patch("unity_command.UNITY_DIR", tmp_path):
-            with patch("sys.argv", ["unity_command.py", "compile", "--timeout", "1"]):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            with patch("sys.argv", ["unity-bridge", "compile", "--timeout", "1"]):
                 # Don't create response - will timeout
                 exit_code = main()
                 assert exit_code == EXIT_TIMEOUT
 
     def test_main_unity_not_running(self, tmp_path):
         nonexistent_dir = tmp_path / "nonexistent"
-        with patch("unity_command.UNITY_DIR", nonexistent_dir):
-            with patch("sys.argv", ["unity_command.py", "get-status", "--timeout", "1"]):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", nonexistent_dir):
+            with patch("sys.argv", ["unity-bridge", "get-status", "--timeout", "1"]):
                 # Mock write_command to return an ID without creating the directory
                 # This simulates the case where the command file can't be written
                 # because Unity never created the directory structure
-                with patch("unity_command.write_command", return_value="mock-id"):
+                with patch("claude_unity_bridge.cli.write_command", return_value="mock-id"):
                     exit_code = main()
                     assert exit_code == EXIT_ERROR
 
@@ -832,29 +908,37 @@ class TestMainFunction:
         blocking_file.write_text("blocking")
         unity_dir = blocking_file / "unity"
 
-        with patch("unity_command.UNITY_DIR", unity_dir):
-            with patch("sys.argv", ["unity_command.py", "compile", "--timeout", "1"]):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", unity_dir):
+            with patch("sys.argv", ["unity-bridge", "compile", "--timeout", "1"]):
                 exit_code = main()
                 assert exit_code == EXIT_ERROR
 
     def test_main_keyboard_interrupt(self, tmp_path):
-        with patch("unity_command.UNITY_DIR", tmp_path):
-            with patch("sys.argv", ["unity_command.py", "compile", "--timeout", "1"]):
-                with patch("unity_command.execute_command", side_effect=KeyboardInterrupt):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            with patch("sys.argv", ["unity-bridge", "compile", "--timeout", "1"]):
+                with patch(
+                    "claude_unity_bridge.cli.execute_command", side_effect=KeyboardInterrupt
+                ):
                     exit_code = main()
                     assert exit_code == EXIT_ERROR
 
     def test_main_unexpected_error(self, tmp_path):
-        with patch("unity_command.UNITY_DIR", tmp_path):
-            with patch("sys.argv", ["unity_command.py", "compile", "--timeout", "1"]):
-                with patch("unity_command.execute_command", side_effect=RuntimeError("Unexpected")):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            with patch("sys.argv", ["unity-bridge", "compile", "--timeout", "1"]):
+                with patch(
+                    "claude_unity_bridge.cli.execute_command",
+                    side_effect=RuntimeError("Unexpected"),
+                ):
                     exit_code = main()
                     assert exit_code == EXIT_ERROR
 
     def test_main_verbose_unexpected_error(self, tmp_path, capsys):
-        with patch("unity_command.UNITY_DIR", tmp_path):
-            with patch("sys.argv", ["unity_command.py", "compile", "--timeout", "1", "--verbose"]):
-                with patch("unity_command.execute_command", side_effect=RuntimeError("Unexpected")):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            with patch("sys.argv", ["unity-bridge", "compile", "--timeout", "1", "--verbose"]):
+                with patch(
+                    "claude_unity_bridge.cli.execute_command",
+                    side_effect=RuntimeError("Unexpected"),
+                ):
                     exit_code = main()
                     assert exit_code == EXIT_ERROR
                     captured = capsys.readouterr()
@@ -866,8 +950,8 @@ class TestArgumentValidation:
 
     def test_timeout_zero_rejected(self, tmp_path, capsys):
         """--timeout 0 should fail validation"""
-        with patch("unity_command.UNITY_DIR", tmp_path):
-            with patch("sys.argv", ["unity_command.py", "get-status", "--timeout", "0"]):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            with patch("sys.argv", ["unity-bridge", "get-status", "--timeout", "0"]):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
                 assert exc_info.value.code == 2  # argparse error exit code
@@ -877,8 +961,8 @@ class TestArgumentValidation:
 
     def test_timeout_negative_rejected(self, tmp_path, capsys):
         """--timeout -5 should fail validation"""
-        with patch("unity_command.UNITY_DIR", tmp_path):
-            with patch("sys.argv", ["unity_command.py", "compile", "--timeout", "-5"]):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            with patch("sys.argv", ["unity-bridge", "compile", "--timeout", "-5"]):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
                 assert exc_info.value.code == 2
@@ -888,8 +972,8 @@ class TestArgumentValidation:
 
     def test_limit_zero_rejected(self, tmp_path, capsys):
         """--limit 0 should fail validation"""
-        with patch("unity_command.UNITY_DIR", tmp_path):
-            argv = ["unity_command.py", "get-console-logs", "--limit", "0", "--timeout", "1"]
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            argv = ["unity-bridge", "get-console-logs", "--limit", "0", "--timeout", "1"]
             with patch("sys.argv", argv):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
@@ -901,8 +985,8 @@ class TestArgumentValidation:
 
     def test_limit_negative_rejected(self, tmp_path, capsys):
         """--limit -1 should fail validation"""
-        with patch("unity_command.UNITY_DIR", tmp_path):
-            argv = ["unity_command.py", "get-console-logs", "--limit", "-1", "--timeout", "1"]
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            argv = ["unity-bridge", "get-console-logs", "--limit", "-1", "--timeout", "1"]
             with patch("sys.argv", argv):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
@@ -913,8 +997,8 @@ class TestArgumentValidation:
 
     def test_limit_too_large_rejected(self, tmp_path, capsys):
         """--limit 1001 should fail validation (exceeds MAX_LIMIT)"""
-        with patch("unity_command.UNITY_DIR", tmp_path):
-            argv = ["unity_command.py", "get-console-logs", "--limit", "1001", "--timeout", "1"]
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            argv = ["unity-bridge", "get-console-logs", "--limit", "1001", "--timeout", "1"]
             with patch("sys.argv", argv):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
@@ -926,9 +1010,9 @@ class TestArgumentValidation:
 
     def test_limit_valid_boundary(self, tmp_path):
         """--limit 1 and --limit 1000 should be accepted"""
-        with patch("unity_command.UNITY_DIR", tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             # Test lower boundary
-            argv = ["unity_command.py", "get-console-logs", "--limit", "1", "--timeout", "1"]
+            argv = ["unity-bridge", "get-console-logs", "--limit", "1", "--timeout", "1"]
             with patch("sys.argv", argv):
 
                 def mock_write(action, params):
@@ -947,12 +1031,12 @@ class TestArgumentValidation:
                     )
                     return command_id
 
-                with patch("unity_command.write_command", side_effect=mock_write):
+                with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write):
                     exit_code = main()
                     assert exit_code == EXIT_SUCCESS
 
             # Test upper boundary
-            argv = ["unity_command.py", "get-console-logs", "--limit", "1000", "--timeout", "1"]
+            argv = ["unity-bridge", "get-console-logs", "--limit", "1000", "--timeout", "1"]
             with patch("sys.argv", argv):
 
                 def mock_write_1000(action, params):
@@ -971,7 +1055,7 @@ class TestArgumentValidation:
                     )
                     return command_id
 
-                with patch("unity_command.write_command", side_effect=mock_write_1000):
+                with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write_1000):
                     exit_code = main()
                     assert exit_code == EXIT_SUCCESS
 
@@ -993,7 +1077,7 @@ class TestSecurityValidation:
         symlink_path = claude_dir / "unity"
         symlink_path.symlink_to(target_dir)
 
-        with patch("unity_command.UNITY_DIR", symlink_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", symlink_path):
             with pytest.raises(UnityCommandError) as exc_info:
                 write_command("test", {})
 
@@ -1004,7 +1088,7 @@ class TestSecurityValidation:
         """Normal (non-symlink) directory should work fine"""
         unity_dir = tmp_path / ".claude" / "unity"
         # Don't create it - write_command should create it
-        with patch("unity_command.UNITY_DIR", unity_dir):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", unity_dir):
             command_id = write_command("test-action", {"param": "value"})
 
             # Should succeed

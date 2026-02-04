@@ -442,6 +442,34 @@ def execute_command(
     return formatted
 
 
+def execute_health_check(timeout: int, verbose: bool) -> int:
+    """Verify Unity Bridge is set up correctly."""
+    print("Checking Unity Bridge setup...")
+
+    # Check 1: Does .claude/unity directory exist?
+    if not UNITY_DIR.exists():
+        print("✗ Unity Bridge not detected")
+        print(f"  Directory not found: {UNITY_DIR}")
+        print("  Is Unity Editor open with the bridge package installed?")
+        return EXIT_ERROR
+    print(f"✓ Bridge directory exists: {UNITY_DIR}")
+
+    # Check 2: Can we communicate with Unity?
+    try:
+        result = execute_command("get-status", {}, timeout=min(timeout, 5), verbose=verbose)
+        print("✓ Unity Editor is responding")
+        if verbose:
+            print(result)
+        return EXIT_SUCCESS
+    except UnityNotRunningError:
+        print("✗ Unity Editor not responding")
+        print("  Ensure Unity is open and the project is loaded")
+        return EXIT_ERROR
+    except CommandTimeoutError:
+        print("✗ Unity Editor timed out")
+        return EXIT_TIMEOUT
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Execute Unity Editor commands via Claude Unity Bridge",
@@ -453,6 +481,7 @@ Commands:
   refresh            Refresh asset database
   get-status         Get editor status
   get-console-logs   Get Unity console logs
+  health-check       Verify Unity Bridge setup
 
 Examples:
   %(prog)s run-tests --mode EditMode --filter "MyTests"
@@ -460,12 +489,20 @@ Examples:
   %(prog)s get-console-logs --limit 20 --filter Error
   %(prog)s get-status
   %(prog)s refresh
+  %(prog)s health-check
         """,
     )
 
     parser.add_argument(
         "command",
-        choices=["run-tests", "compile", "refresh", "get-status", "get-console-logs"],
+        choices=[
+            "run-tests",
+            "compile",
+            "refresh",
+            "get-status",
+            "get-console-logs",
+            "health-check",
+        ],
         help="Command to execute",
     )
 
@@ -505,6 +542,10 @@ Examples:
     if args.limit is not None:
         if args.limit < MIN_LIMIT or args.limit > MAX_LIMIT:
             parser.error(f"--limit must be between {MIN_LIMIT} and {MAX_LIMIT}")
+
+    # Handle health-check command separately
+    if args.command == "health-check":
+        return execute_health_check(args.timeout, args.verbose)
 
     # Build parameters based on command
     params = {}

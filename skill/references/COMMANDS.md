@@ -19,7 +19,7 @@ Execute Unity tests in EditMode or PlayMode.
 ### Usage
 
 ```bash
-python scripts/unity_command.py run-tests [options]
+unity-bridge run-tests [options]
 ```
 
 ### Parameters
@@ -109,7 +109,7 @@ During execution, you may see intermediate `status: "running"` responses with pr
 
 ### Formatted Output
 
-The Python script formats the output for readability:
+The CLI formats the output for readability:
 
 ```
 ✓ Tests Passed: 408
@@ -177,19 +177,19 @@ Failed Tests:
 
 ```bash
 # Run all EditMode tests (fast)
-python scripts/unity_command.py run-tests --mode EditMode
+unity-bridge run-tests --mode EditMode
 
 # Run specific test suite
-python scripts/unity_command.py run-tests --filter "MXR.Tests.Auth"
+unity-bridge run-tests --filter "MXR.Tests.Auth"
 
 # Run multiple test suites
-python scripts/unity_command.py run-tests --filter "AuthTests;NetworkTests"
+unity-bridge run-tests --filter "AuthTests;NetworkTests"
 
 # Run PlayMode tests with extended timeout
-python scripts/unity_command.py run-tests --mode PlayMode --timeout 60
+unity-bridge run-tests --mode PlayMode --timeout 60
 
 # Run all tests
-python scripts/unity_command.py run-tests
+unity-bridge run-tests
 ```
 
 ---
@@ -201,7 +201,7 @@ Trigger Unity script compilation and wait for completion.
 ### Usage
 
 ```bash
-python scripts/unity_command.py compile [options]
+unity-bridge compile [options]
 ```
 
 ### Parameters
@@ -288,13 +288,13 @@ The command will wait for compilation to complete.
 
 ```bash
 # Basic compilation
-python scripts/unity_command.py compile
+unity-bridge compile
 
 # With extended timeout for large projects
-python scripts/unity_command.py compile --timeout 60
+unity-bridge compile --timeout 60
 
 # Cleanup old responses first
-python scripts/unity_command.py compile --cleanup
+unity-bridge compile --cleanup
 ```
 
 ---
@@ -306,7 +306,7 @@ Force Unity to refresh the asset database, reimporting changed assets.
 ### Usage
 
 ```bash
-python scripts/unity_command.py refresh [options]
+unity-bridge refresh [options]
 ```
 
 ### Parameters
@@ -388,13 +388,13 @@ Unity will refresh but may report import errors in the console. The command will
 
 ```bash
 # Basic refresh
-python scripts/unity_command.py refresh
+unity-bridge refresh
 
 # After git operations (pulling changes)
-git pull && python scripts/unity_command.py refresh
+git pull && unity-bridge refresh
 
 # With extended timeout for large projects
-python scripts/unity_command.py refresh --timeout 60
+unity-bridge refresh --timeout 60
 ```
 
 ---
@@ -406,7 +406,7 @@ Get current Unity Editor state, including compilation status, play mode, and upd
 ### Usage
 
 ```bash
-python scripts/unity_command.py get-status
+unity-bridge get-status
 ```
 
 ### Parameters
@@ -496,7 +496,7 @@ Check status before:
 
 ```bash
 # Check current status
-python scripts/unity_command.py get-status
+unity-bridge get-status
 
 # Wait for compilation to finish (pseudo-code workflow)
 while status.isCompiling:
@@ -514,7 +514,7 @@ Retrieve Unity console logs with filtering options.
 ### Usage
 
 ```bash
-python scripts/unity_command.py get-console-logs [options]
+unity-bridge get-console-logs [options]
 ```
 
 ### Parameters
@@ -638,20 +638,20 @@ No console logs found
 
 ```bash
 # Get last 20 logs
-python scripts/unity_command.py get-console-logs --limit 20
+unity-bridge get-console-logs --limit 20
 
 # Get only errors
-python scripts/unity_command.py get-console-logs --filter Error
+unity-bridge get-console-logs --filter Error
 
 # Get only warnings
-python scripts/unity_command.py get-console-logs --filter Warning
+unity-bridge get-console-logs --filter Warning
 
 # Get last 5 logs of all types
-python scripts/unity_command.py get-console-logs --limit 5
+unity-bridge get-console-logs --limit 5
 
 # Check for errors after compilation
-python scripts/unity_command.py compile
-python scripts/unity_command.py get-console-logs --filter Error --limit 10
+unity-bridge compile
+unity-bridge get-console-logs --filter Error --limit 10
 ```
 
 ---
@@ -662,11 +662,11 @@ python scripts/unity_command.py get-console-logs --filter Error --limit 10
 
 ```bash
 # Check if compiling
-status=$(python scripts/unity_command.py get-status)
+status=$(unity-bridge get-status)
 
 # If ready, run tests
 if [[ $status == *"✓ Ready"* ]]; then
-    python scripts/unity_command.py run-tests
+    unity-bridge run-tests
 else
     echo "Waiting for compilation..."
 fi
@@ -676,11 +676,11 @@ fi
 
 ```bash
 # Run tests
-python scripts/unity_command.py run-tests
+unity-bridge run-tests
 
 # If failed (exit code 1), get error logs
 if [ $? -ne 0 ]; then
-    python scripts/unity_command.py get-console-logs --filter Error --limit 10
+    unity-bridge get-console-logs --filter Error --limit 10
 fi
 ```
 
@@ -688,16 +688,16 @@ fi
 
 ```bash
 # 1. Check status
-python scripts/unity_command.py get-status
+unity-bridge get-status
 
 # 2. Compile
-python scripts/unity_command.py compile
+unity-bridge compile
 
 # 3. Run tests
-python scripts/unity_command.py run-tests
+unity-bridge run-tests
 
 # 4. Check for errors
-python scripts/unity_command.py get-console-logs --filter Error
+unity-bridge get-console-logs --filter Error
 ```
 
 ### After Git Pull Workflow
@@ -707,13 +707,13 @@ python scripts/unity_command.py get-console-logs --filter Error
 git pull
 
 # Refresh assets
-python scripts/unity_command.py refresh
+unity-bridge refresh
 
 # Wait for compilation
 # (Unity will auto-compile after refresh)
 
 # Run tests
-python scripts/unity_command.py run-tests --mode EditMode
+unity-bridge run-tests --mode EditMode
 ```
 
 ---
@@ -734,7 +734,7 @@ All commands return standard exit codes for shell integration:
 #!/bin/bash
 
 # Run tests and check exit code
-python scripts/unity_command.py run-tests --mode EditMode
+unity-bridge run-tests --mode EditMode
 
 case $? in
     0)
@@ -764,7 +764,7 @@ All commands return one of these status values:
 | `error` | Command could not execute | Check `error` field for details |
 | `running` | Command in progress | Wait for final response (handled by script) |
 
-The Python script automatically polls for final responses, so you typically only see `success`, `failure`, or `error`.
+The CLI automatically polls for final responses, so you typically only see `success`, `failure`, or `error`.
 
 ---
 

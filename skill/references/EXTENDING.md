@@ -141,11 +141,11 @@ Commands = new Dictionary<string, ICommand> {
 
 ### Step 3: Test from Python Script
 
-The Python script automatically works with your custom command:
+The CLI automatically works with your custom command:
 
 ```bash
 # The script handles all the file I/O, polling, and formatting
-python scripts/unity_command.py your-command
+unity-bridge your-command
 ```
 
 That's it! Your command is now available through Claude Code.
@@ -264,7 +264,7 @@ public void Execute(CommandRequest request, ...) {
 
 **From Python:**
 
-The script automatically passes parameters from command-line args. You may want to extend the Python script's argparse configuration to support your custom parameters, or pass them as generic params.
+The script automatically passes parameters from command-line args. You may want to extend the CLI's argparse configuration to support your custom parameters, or pass them as generic params.
 
 ---
 
@@ -457,9 +457,9 @@ Commands = new Dictionary<string, ICommand> {
 **Usage:**
 
 ```bash
-# You'll need to extend the Python script to support --target-platform and --development-build
+# You'll need to extend the CLI to support --target-platform and --development-build
 # Or create a project-specific wrapper script
-python scripts/unity_command.py build
+unity-bridge build
 ```
 
 ---
@@ -686,7 +686,7 @@ public class CIBuildCommand : ICommand {
 unity -batchmode -projectPath . -executeMethod YourCICommand.Execute
 
 # Or use the bridge directly
-python scripts/unity_command.py ci-build
+unity-bridge ci-build
 ```
 
 ### Pre-Commit Hook
@@ -698,8 +698,8 @@ Validate project before committing:
 # .git/hooks/pre-commit
 
 # Run Unity validation
-python scripts/unity_command.py validate-assets
-python scripts/unity_command.py run-tests --mode EditMode
+unity-bridge validate-assets
+unity-bridge run-tests --mode EditMode
 
 if [ $? -ne 0 ]; then
     echo "Tests failed! Fix issues before committing."
@@ -874,10 +874,10 @@ cat .claude/unity/response-test-123.json
 
 ### Via Python Script
 
-Once registered, test via the Python script:
+Once registered, test via the CLI:
 
 ```bash
-python scripts/unity_command.py your-command --verbose
+unity-bridge your-command --verbose
 ```
 
 The `--verbose` flag shows detailed execution progress.
@@ -911,7 +911,7 @@ public class TestCustomCommandsCommand : ICommand {
 
 ## Extending the Python Script
 
-If you need custom argument parsing for your commands, you can fork or extend the Python script:
+If you need custom argument parsing for your commands, you can fork or extend the CLI:
 
 ```python
 # Add to argparse configuration
@@ -967,17 +967,17 @@ elif args.command == "load-scene":
 
 **Solution:**
 1. Check parameter names match `CommandParams` fields
-2. Ensure Python script passes parameters correctly
+2. Ensure CLI passes parameters correctly
 3. Use `request.@params?.yourParam` to handle null params
 4. Log parameter values in Unity Console for debugging
 
 ### Response Not Formatted
 
-**Symptom:** Python script shows raw JSON instead of formatted output
+**Symptom:** CLI shows raw JSON instead of formatted output
 
 **Solution:**
-1. The Python script only formats known commands
-2. Either extend `format_response()` in Python script for your command
+1. The CLI only formats known commands
+2. Either extend `format_response()` in CLI for your command
 3. Or use existing response fields that are already formatted
 
 ---
@@ -988,7 +988,7 @@ Extending the Unity Bridge is straightforward:
 
 1. **Create command class** implementing `ICommand`
 2. **Register command** in `ClaudeBridge.cs`
-3. **Test with Python script** - it automatically handles file I/O
+3. **Test with CLI** - it automatically handles file I/O
 
 The architecture is designed for extensibility while keeping the core simple and reliable. Your custom commands benefit from the same rock-solid file protocol, error handling, and progress reporting as the built-in commands.
 
