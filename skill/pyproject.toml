@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claude-unity-bridge"
+version = "0.1.1"
+description = "Control Unity Editor from Claude Code"
+readme = "SKILL.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.8"
+
+[project.scripts]
+unity-bridge = "claude_unity_bridge.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-cov>=4.0", "black>=23.0", "flake8>=6.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

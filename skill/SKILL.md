@@ -32,7 +32,7 @@ The Unity Bridge enables Claude Code to trigger operations in a running Unity Ed
 
 ## How It Works
 
-The skill uses a Python helper script (`scripts/unity_command.py`) that handles:
+The skill uses a CLI tool (`unity-bridge`) that handles:
 - UUID generation for command tracking
 - Atomic file writes to prevent corruption
 - Exponential backoff polling for responses
@@ -46,10 +46,10 @@ This approach ensures **deterministic, rock-solid execution** - the script is te
 
 ### Basic Pattern
 
-When you need to interact with Unity, use the Python script directly:
+When you need to interact with Unity, use the CLI directly:
 
 ```bash
-python scripts/unity_command.py [command] [options]
+unity-bridge [command] [options]
 ```
 
 All commands automatically:
@@ -67,13 +67,13 @@ Execute Unity tests in EditMode or PlayMode:
 
 ```bash
 # Run all EditMode tests
-python scripts/unity_command.py run-tests --mode EditMode
+unity-bridge run-tests --mode EditMode
 
 # Run tests with filter
-python scripts/unity_command.py run-tests --mode EditMode --filter "MXR.Tests"
+unity-bridge run-tests --mode EditMode --filter "MXR.Tests"
 
 # Run all tests (both modes)
-python scripts/unity_command.py run-tests
+unity-bridge run-tests
 ```
 
 **Output:**
@@ -100,7 +100,7 @@ Failed Tests:
 Trigger Unity script compilation:
 
 ```bash
-python scripts/unity_command.py compile
+unity-bridge compile
 ```
 
 **Output (Success):**
@@ -123,13 +123,13 @@ Retrieve Unity console output:
 
 ```bash
 # Get last 20 logs
-python scripts/unity_command.py get-console-logs --limit 20
+unity-bridge get-console-logs --limit 20
 
 # Get only errors
-python scripts/unity_command.py get-console-logs --limit 10 --filter Error
+unity-bridge get-console-logs --limit 10 --filter Error
 
 # Get warnings
-python scripts/unity_command.py get-console-logs --filter Warning
+unity-bridge get-console-logs --filter Warning
 ```
 
 **Output:**
@@ -154,7 +154,7 @@ Console Logs (last 10, filtered by Error):
 Check Unity Editor state:
 
 ```bash
-python scripts/unity_command.py get-status
+unity-bridge get-status
 ```
 
 **Output:**
@@ -175,7 +175,7 @@ Unity Editor Status:
 Force Unity to refresh assets:
 
 ```bash
-python scripts/unity_command.py refresh
+unity-bridge refresh
 ```
 
 **Output:**
@@ -191,7 +191,7 @@ Duration: 0.5s
 Override the default 30-second timeout:
 
 ```bash
-python scripts/unity_command.py run-tests --timeout 60
+unity-bridge run-tests --timeout 60
 ```
 
 Use longer timeouts for:
@@ -204,7 +204,7 @@ Use longer timeouts for:
 Automatically remove old response files before executing:
 
 ```bash
-python scripts/unity_command.py compile --cleanup
+unity-bridge compile --cleanup
 ```
 
 This removes response files older than 1 hour. Useful for maintaining a clean workspace.
@@ -214,7 +214,7 @@ This removes response files older than 1 hour. Useful for maintaining a clean wo
 See detailed execution progress:
 
 ```bash
-python scripts/unity_command.py run-tests --verbose
+unity-bridge run-tests --verbose
 ```
 
 Prints:
@@ -305,8 +305,13 @@ Read from `.claude/unity/response-{id}.json`:
 ```
 skill/
 ├── SKILL.md                    # This file
-├── scripts/
-│   └── unity_command.py        # Command execution script
+├── pyproject.toml              # Package configuration
+├── src/
+│   └── claude_unity_bridge/
+│       ├── __init__.py         # Package version
+│       └── cli.py              # CLI implementation
+├── tests/
+│   └── test_cli.py             # Unit tests
 └── references/
     ├── COMMANDS.md             # Detailed command specifications
     └── EXTENDING.md            # Guide for adding custom commands
@@ -356,42 +361,50 @@ For more information, see:
 **Symptoms:** Intermittent errors reading/writing files
 
 **Solutions:**
-1. The script handles file locking automatically with retries
+1. The CLI handles file locking automatically with retries
 2. If persistent, check for antivirus interference
 3. Verify file permissions on `.claude/unity/` directory
 
 ## Installation
 
-### For This Project (During Development)
+### Install the CLI
 
-The skill is already in this repository under `skill/`. No installation needed for development.
+```bash
+pip install claude-unity-bridge
+```
 
-### For Claude Code Users
+Or for development:
+```bash
+cd claude-unity-bridge/skill
+pip install -e ".[dev]"
+```
+
+### Verify Setup
+
+```bash
+unity-bridge health-check
+```
+
+### Install the Skill (Optional)
 
 To use this skill in Claude Code:
 
-1. Copy the entire `skill/` directory to your Claude Code skills location:
+1. Symlink the skill directory:
    ```bash
-   cp -r skill ~/.claude/skills/unity
+   ln -s "$(pwd)/skill" ~/.claude/skills/unity
    ```
 
 2. Restart Claude Code to load the skill
 
-3. Install the Unity package in your Unity project:
-   - Open Unity Editor
-   - Go to `Window > Package Manager`
-   - Click `+` > `Add package from git URL...`
-   - Enter: `https://github.com/ManageXR/claude-unity-bridge.git`
+3. Navigate to your Unity project directory in Claude Code
 
-4. Navigate to your Unity project directory in Claude Code
+4. Ask Claude to perform Unity operations naturally
 
-5. Ask Claude to perform Unity operations naturally
+## Why a CLI Tool?
 
-## Why Python Script?
+The skill uses a CLI tool instead of implementing the protocol directly in Claude Code prompts for several critical reasons:
 
-The skill uses a Python script instead of implementing the protocol directly in Claude Code prompts for several critical reasons:
-
-**Consistency:** UUID generation, polling logic, and error handling work identically every time. Without the script, Claude might implement these differently across sessions, leading to subtle bugs.
+**Consistency:** UUID generation, polling logic, and error handling work identically every time. Without the CLI, Claude might implement these differently across sessions, leading to subtle bugs.
 
 **Reliability:** All edge cases are handled once in tested code:
 - File locking when Unity writes responses
@@ -402,11 +415,11 @@ The skill uses a Python script instead of implementing the protocol directly in 
 
 **Error Messages:** Clear, actionable error messages for all failure modes. Claude doesn't have to figure out what went wrong each time.
 
-**Token Efficiency:** The script handles complexity, so Claude doesn't need to manage low-level details in-context. The SKILL.md stays concise while providing full functionality.
+**Token Efficiency:** The CLI handles complexity, so Claude doesn't need to manage low-level details in-context. The SKILL.md stays concise while providing full functionality.
 
 **Deterministic Exit Codes:** Shell integration works reliably with standard exit codes (0=success, 1=error, 2=timeout).
 
-**Rock Solid:** Test the script once, it works forever. No variability between Claude sessions.
+**Rock Solid:** Test the CLI once, it works forever. No variability between Claude sessions.
 
 ## Support
 

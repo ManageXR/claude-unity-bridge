@@ -3,7 +3,29 @@
 ## Requirements
 
 - Unity 2021.3 or later
-- No additional dependencies
+- Python 3.8 or later (for the CLI)
+
+## Unity Bridge CLI
+
+### Via pip (Recommended)
+
+```bash
+pip install claude-unity-bridge
+```
+
+### For Development
+
+```bash
+cd claude-unity-bridge/skill
+pip install -e ".[dev]"
+```
+
+### Verify Installation
+
+```bash
+unity-bridge --help
+unity-bridge health-check
+```
 
 ## Unity Package
 

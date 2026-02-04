@@ -25,15 +25,19 @@ In Unity: `Window > Package Manager > + > Add package from git URL...`
 https://github.com/ManageXR/claude-unity-bridge.git?path=package
 ```
 
-### 2. Install the Claude Code Skill (optional)
+### 2. Install the CLI
 
 ```bash
-ln -s "$(pwd)/skill" ~/.claude/skills/unity
+pip install claude-unity-bridge
 ```
 
-Then restart Claude Code. The skill auto-activates in Unity project directories.
+### 3. Verify Setup
 
-### 3. Use It
+```bash
+unity-bridge health-check
+```
+
+### 4. Use It
 
 Ask Claude Code naturally:
 
@@ -41,11 +45,24 @@ Ask Claude Code naturally:
 - "Check if there are any compilation errors"
 - "Show me the error logs from Unity"
 
+Or use the CLI directly:
+
+```bash
+unity-bridge run-tests --mode EditMode
+unity-bridge compile
+unity-bridge get-console-logs --limit 10
+```
+
 ## ⚙️ How It Works
 
-1. Claude Code writes commands to `.claude/unity/command.json`
-2. Unity Editor polls and executes commands
-3. Results appear in `.claude/unity/response-{id}.json`
+```
+Claude Code → unity-bridge CLI → .claude/unity/command.json → Unity Editor → response.json
+```
+
+1. Claude Code (or you) runs `unity-bridge` commands
+2. The CLI writes commands to `.claude/unity/command.json`
+3. Unity Editor polls and executes commands
+4. Results appear in `.claude/unity/response-{id}.json`
 
 Each Unity project has its own `.claude/unity/` directory, enabling multi-project support.
 
