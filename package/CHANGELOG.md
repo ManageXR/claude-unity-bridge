@@ -5,6 +5,13 @@ All notable changes to the Claude Unity Bridge package will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-02-04
+
+### Fixed
+
+- Corrected license reference in skill documentation
+- Fixed Unity project folder reference in contributing guide
+
 ## [0.1.0] - 2026-01-22
 
 ### Added
@@ -37,4 +44,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Editor-only package (no runtime impact)
 - Automatic initialization via `[InitializeOnLoad]`
 
+[0.1.1]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.1
 [0.1.0]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.0

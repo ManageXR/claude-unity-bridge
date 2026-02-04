@@ -1,23 +1,27 @@
 ---
 name: Bug Report
-about: Report a bug in Claude Unity Bridge
+about: Report a bug or unexpected behavior
+title: ''
 labels: bug
+assignees: ''
 ---
 
 **Describe the bug**
-A clear description of the bug.
+A clear description of what the bug is.
 
 **To Reproduce**
-Steps to reproduce:
-1. ...
+Steps to reproduce the behavior:
+1.
+2.
+3.
 
 **Expected behavior**
-What should happen.
+What you expected to happen.
 
 **Environment**
 - Unity version:
 - OS:
-- Python version (if skill-related):
+- Python version (if using skill):
 
 **Additional context**
-Any other info.
+Any other relevant information, error messages, or screenshots.

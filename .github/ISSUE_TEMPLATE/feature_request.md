@@ -1,14 +1,19 @@
 ---
 name: Feature Request
-about: Suggest an idea
+about: Suggest a new feature or improvement
+title: ''
 labels: enhancement
+assignees: ''
 ---
 
-**Problem**
-What problem does this solve?
+**Problem or use case**
+Describe the problem you're trying to solve or the use case for this feature.
 
-**Proposed Solution**
-How would you solve it?
+**Proposed solution**
+How you think this could be addressed.
 
-**Alternatives**
-Other solutions considered.
+**Alternatives considered**
+Any alternative solutions or workarounds you've considered.
+
+**Additional context**
+Any other relevant information.
