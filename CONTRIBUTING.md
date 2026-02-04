@@ -23,7 +23,7 @@ Welcome! We appreciate your interest in contributing to the Claude Unity Bridge.
    ```
 
 3. **Open Unity project** (for testing Unity components)
-   - Open the `UnityProject` folder in Unity 2021.3 or later
+   - Open the `.TestProject` folder in Unity 2021.3 or later
 
 ## Testing Requirements
 

@@ -408,10 +408,6 @@ The skill uses a Python script instead of implementing the protocol directly in 
 
 **Rock Solid:** Test the script once, it works forever. No variability between Claude sessions.
 
-## License
-
-MIT - See main package repository for details.
-
 ## Support
 
 For issues or questions:
