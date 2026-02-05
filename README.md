@@ -56,15 +56,15 @@ unity-bridge get-console-logs --limit 10
 ## ⚙️ How It Works
 
 ```
-Claude Code → unity-bridge CLI → .claude/unity/command.json → Unity Editor → response.json
+Claude Code → unity-bridge CLI → .unity-bridge/command.json → Unity Editor → response.json
 ```
 
 1. Claude Code (or you) runs `unity-bridge` commands
-2. The CLI writes commands to `.claude/unity/command.json`
+2. The CLI writes commands to `.unity-bridge/command.json`
 3. Unity Editor polls and executes commands
-4. Results appear in `.claude/unity/response-{id}.json`
+4. Results appear in `.unity-bridge/response-{id}.json`
 
-Each Unity project has its own `.claude/unity/` directory, enabling multi-project support.
+Each Unity project has its own `.unity-bridge/` directory, enabling multi-project support.
 
 ## 📚 Documentation
 

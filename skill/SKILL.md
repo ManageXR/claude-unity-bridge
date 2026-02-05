@@ -9,7 +9,7 @@ Control Unity Editor operations from Claude Code using a reliable file-based com
 
 ## Overview
 
-The Unity Bridge enables Claude Code to trigger operations in a running Unity Editor instance without network configuration or port conflicts. It uses a simple file-based protocol where commands are written to `.claude/unity/command.json` and responses are read from `.claude/unity/response-{id}.json`.
+The Unity Bridge enables Claude Code to trigger operations in a running Unity Editor instance without network configuration or port conflicts. It uses a simple file-based protocol where commands are written to `.unity-bridge/command.json` and responses are read from `.unity-bridge/response-{id}.json`.
 
 **Key Features:**
 - Execute EditMode and PlayMode tests
@@ -18,7 +18,7 @@ The Unity Bridge enables Claude Code to trigger operations in a running Unity Ed
 - Check editor status (compilation, play mode, etc.)
 - Retrieve Unity console logs
 
-**Multi-Project Support:** Each Unity project has its own `.claude/unity/` directory, allowing multiple projects to be worked on simultaneously.
+**Multi-Project Support:** Each Unity project has its own `.unity-bridge/` directory, allowing multiple projects to be worked on simultaneously.
 
 ## Requirements
 
@@ -262,7 +262,7 @@ Claude Code will automatically use this skill to execute the commands via the Py
 
 ### Command Format
 
-Written to `.claude/unity/command.json`:
+Written to `.unity-bridge/command.json`:
 
 ```json
 {
@@ -277,7 +277,7 @@ Written to `.claude/unity/command.json`:
 
 ### Response Format
 
-Read from `.claude/unity/response-{id}.json`:
+Read from `.unity-bridge/response-{id}.json`:
 
 ```json
 {
@@ -333,7 +333,7 @@ For more information, see:
 **Solutions:**
 1. Ensure Unity Editor is open with the project loaded
 2. Check that the package is installed (`Window > Package Manager`)
-3. Verify `.claude/unity/` directory exists in project root
+3. Verify `.unity-bridge/` directory exists in project root
 4. Check Unity Console for errors from ClaudeBridge package
 
 ### Response File Issues
@@ -342,7 +342,7 @@ For more information, see:
 
 **Solutions:**
 1. Check Unity Console for ClaudeBridge errors
-2. Manually inspect `.claude/unity/response-*.json` files
+2. Manually inspect `.unity-bridge/response-*.json` files
 3. Try cleaning up old responses with `--cleanup` flag
 4. Restart Unity Editor if file system is in bad state
 
@@ -363,7 +363,7 @@ For more information, see:
 **Solutions:**
 1. The CLI handles file locking automatically with retries
 2. If persistent, check for antivirus interference
-3. Verify file permissions on `.claude/unity/` directory
+3. Verify file permissions on `.unity-bridge/` directory
 
 ## Installation
 

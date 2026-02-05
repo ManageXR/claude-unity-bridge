@@ -4,11 +4,11 @@
 
 ClaudeBridge uses a file-based protocol for communication:
 
-1. **Command File**: Claude Code writes commands to `.claude/unity/command.json`
+1. **Command File**: Claude Code writes commands to `.unity-bridge/command.json`
 2. **Processing**: Unity Editor polls for commands and executes them
-3. **Response File**: Results are written to `.claude/unity/response-{id}.json`
+3. **Response File**: Results are written to `.unity-bridge/response-{id}.json`
 
-This approach enables multi-project support - each Unity project has its own `.claude/unity/` directory, allowing multiple agents to work on different projects simultaneously.
+This approach enables multi-project support - each Unity project has its own `.unity-bridge/` directory, allowing multiple agents to work on different projects simultaneously.
 
 ## Commands
 

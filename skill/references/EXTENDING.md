@@ -851,7 +851,7 @@ if (EditorApplication.isPlaying) {
 1. **Write Command File:**
 
 ```bash
-cat > .claude/unity/command.json << EOF
+cat > .unity-bridge/command.json << EOF
 {
   "id": "test-123",
   "action": "your-command",
@@ -869,7 +869,7 @@ EOF
 3. **Read Response:**
 
 ```bash
-cat .claude/unity/response-test-123.json
+cat .unity-bridge/response-test-123.json
 ```
 
 ### Via Python Script

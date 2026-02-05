@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `refresh` command - Force asset database refresh
 - `get-status` command - Check editor compilation/update state
 - `get-console-logs` command - Retrieve Unity console output with filtering
-- Multi-project support via per-project `.claude/unity/` directories
+- Multi-project support via per-project `.unity-bridge/` directories
 - Tools menu with status display and cleanup utilities
 - Zero external dependencies - pure C# implementation
 - Support for Unity 2021.3 and later
