@@ -807,7 +807,7 @@ If commands frequently timeout:
 **"Unity Editor not detected"**
 - Unity is not running
 - Unity project is not open
-- `.claude/unity/` directory doesn't exist (package not installed)
+- `.unity-bridge/` directory doesn't exist (package not installed)
 
 **Solution:** Open Unity with your project and ensure package is installed.
 
@@ -849,7 +849,7 @@ If commands frequently timeout:
 ### Linux
 - File paths use forward slashes
 - Case-sensitive file systems
-- May need to adjust file permissions on `.claude/` directory
+- May need to adjust file permissions on `.unity-bridge/` directory
 
 ---
 

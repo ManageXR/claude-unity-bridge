@@ -24,7 +24,7 @@ namespace MXR.ClaudeBridge {
         private static readonly Regex ValidIdPattern = new Regex(@"^[a-fA-F0-9\-]+$", RegexOptions.Compiled);
 
         static ClaudeBridge() {
-            CommandDir = Path.Combine(Application.dataPath, "..", ".claude", "unity");
+            CommandDir = Path.Combine(Application.dataPath, "..", ".unity-bridge");
             CommandFilePath = Path.Combine(CommandDir, "command.json");
 
             Commands = new Dictionary<string, ICommand> {

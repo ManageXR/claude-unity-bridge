@@ -14,7 +14,7 @@
 ### ✅ Package Loading
 - Package shows in Unity Package Manager as "Local"
 - ClaudeBridge initialized successfully
-- Command directory created: `.TestProject/.claude/unity/`
+- Command directory created: `.TestProject/.unity-bridge/`
 - Unity Console shows initialization messages
 
 ### ✅ Bridge Protocol
@@ -68,7 +68,7 @@ cd /path/to/claude-unity-bridge
 python3 skill/scripts/unity_command.py get-status
 ```
 
-This writes to `/path/to/claude-unity-bridge/.claude/unity/` but Unity looks at project's `.claude/unity/`.
+This writes to `/path/to/claude-unity-bridge/.unity-bridge/` but Unity looks at project's `.unity-bridge/`.
 
 ### ✅ Correct:
 ```bash
@@ -76,7 +76,7 @@ cd /path/to/claude-unity-bridge/.TestProject
 python3 ../skill/scripts/unity_command.py get-status
 ```
 
-This writes to `.TestProject/.claude/unity/` where Unity is polling.
+This writes to `.TestProject/.unity-bridge/` where Unity is polling.
 
 ---
 
@@ -141,10 +141,9 @@ Monitor Unity Console for `[ClaudeBridge]` log messages:
 
 ```
 .TestProject/
-├── .claude/
-│   └── unity/              # Bridge protocol directory
-│       ├── command.json    # Written by Python script
-│       └── response-*.json # Written by Unity, read by Python
+├── .unity-bridge/          # Bridge protocol directory
+│   ├── command.json        # Written by Python script
+│   └── response-*.json     # Written by Unity, read by Python
 ├── Assets/                 # Unity assets (gitignored)
 ├── Library/                # Unity cache (gitignored)
 ├── Logs/                   # Unity logs (gitignored)
@@ -164,7 +163,7 @@ During testing, Unity Console showed:
 
 ```
 [ClaudeBridge] Status:
-  Command directory: /Users/.../claude-unity-bridge/.TestProject/.claude/unity
+  Command directory: /Users/.../claude-unity-bridge/.TestProject/.unity-bridge
   Is processing: False
   Current command ID: none
   Command file exists: False
@@ -189,7 +188,7 @@ All commands processed successfully with proper callbacks.
 
 - [x] Unity Package Manager shows "Claude Unity Bridge" as "Local" package
 - [x] Unity Console shows `[ClaudeBridge]` initialization and processing messages
-- [x] `.claude/unity/` directory created by Unity on startup
+- [x] `.unity-bridge/` directory created by Unity on startup
 - [x] `python3 ../skill/scripts/unity_command.py get-status` returns success (exit code 0)
 - [x] Response shows correct Unity version and project state
 - [x] All bridge commands work (compile, refresh, get-console-logs, run-tests)

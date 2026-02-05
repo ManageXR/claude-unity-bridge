@@ -25,6 +25,7 @@ from claude_unity_bridge.cli import (
     cleanup_response_file,
     execute_command,
     execute_health_check,
+    check_gitignore_and_notify,
     main,
     UnityCommandError,
     CommandTimeoutError,
@@ -1064,17 +1065,13 @@ class TestSecurityValidation:
     """Test security-related validations"""
 
     def test_symlink_detection(self, tmp_path):
-        """Symlinked .claude/unity directory should raise security error"""
+        """Symlinked .unity-bridge directory should raise security error"""
         # Create a target directory for the symlink
         target_dir = tmp_path / "real_dir"
         target_dir.mkdir()
 
-        # Create the .claude directory
-        claude_dir = tmp_path / ".claude"
-        claude_dir.mkdir()
-
-        # Create a symlink for the unity directory
-        symlink_path = claude_dir / "unity"
+        # Create a symlink for the .unity-bridge directory
+        symlink_path = tmp_path / ".unity-bridge"
         symlink_path.symlink_to(target_dir)
 
         with patch("claude_unity_bridge.cli.UNITY_DIR", symlink_path):
@@ -1086,15 +1083,96 @@ class TestSecurityValidation:
 
     def test_normal_directory_allowed(self, tmp_path):
         """Normal (non-symlink) directory should work fine"""
-        unity_dir = tmp_path / ".claude" / "unity"
+        unity_dir = tmp_path / ".unity-bridge"
         # Don't create it - write_command should create it
         with patch("claude_unity_bridge.cli.UNITY_DIR", unity_dir):
-            command_id = write_command("test-action", {"param": "value"})
+            # Also patch cwd for gitignore check
+            with patch("pathlib.Path.cwd", return_value=tmp_path):
+                command_id = write_command("test-action", {"param": "value"})
 
             # Should succeed
             assert len(command_id) == 36
             assert unity_dir.exists()
             assert not unity_dir.is_symlink()
+
+
+class TestGitignoreNotification:
+    """Test gitignore notification feature"""
+
+    def test_no_notification_when_gitignore_contains_unity_bridge(self, tmp_path, capsys):
+        """No notification when .unity-bridge is already in .gitignore"""
+        gitignore = tmp_path / ".gitignore"
+        gitignore.write_text(".unity-bridge/\n")
+
+        with patch("pathlib.Path.cwd", return_value=tmp_path):
+            check_gitignore_and_notify()
+
+        captured = capsys.readouterr()
+        assert ".unity-bridge" not in captured.err
+
+    def test_no_notification_when_gitignore_contains_pattern(self, tmp_path, capsys):
+        """No notification when gitignore contains .unity-bridge pattern (without slash)"""
+        gitignore = tmp_path / ".gitignore"
+        gitignore.write_text("*.log\n.unity-bridge\ntemp/\n")
+
+        with patch("pathlib.Path.cwd", return_value=tmp_path):
+            check_gitignore_and_notify()
+
+        captured = capsys.readouterr()
+        assert ".unity-bridge" not in captured.err
+
+    def test_notification_when_gitignore_missing(self, tmp_path, capsys):
+        """Notification when .gitignore doesn't exist"""
+        # Ensure no .gitignore exists
+        gitignore = tmp_path / ".gitignore"
+        if gitignore.exists():
+            gitignore.unlink()
+
+        with patch("pathlib.Path.cwd", return_value=tmp_path):
+            check_gitignore_and_notify()
+
+        captured = capsys.readouterr()
+        assert ".unity-bridge/" in captured.err
+        assert "gitignore" in captured.err.lower()
+
+    def test_notification_when_gitignore_exists_without_unity_bridge(self, tmp_path, capsys):
+        """Notification when .gitignore exists but doesn't contain .unity-bridge"""
+        gitignore = tmp_path / ".gitignore"
+        gitignore.write_text("*.log\nnode_modules/\n")
+
+        with patch("pathlib.Path.cwd", return_value=tmp_path):
+            check_gitignore_and_notify()
+
+        captured = capsys.readouterr()
+        assert ".unity-bridge/" in captured.err
+        assert "gitignore" in captured.err.lower()
+
+    def test_notification_on_first_directory_creation(self, tmp_path, capsys):
+        """Notification is shown when directory is first created"""
+        unity_dir = tmp_path / ".unity-bridge"
+        # Ensure no gitignore to trigger notification
+        gitignore = tmp_path / ".gitignore"
+        if gitignore.exists():
+            gitignore.unlink()
+
+        with patch("claude_unity_bridge.cli.UNITY_DIR", unity_dir):
+            with patch("pathlib.Path.cwd", return_value=tmp_path):
+                write_command("test", {})
+
+        captured = capsys.readouterr()
+        assert ".unity-bridge/" in captured.err
+
+    def test_no_notification_on_subsequent_command(self, tmp_path, capsys):
+        """No notification when directory already exists"""
+        unity_dir = tmp_path / ".unity-bridge"
+        unity_dir.mkdir()  # Pre-create directory
+
+        with patch("claude_unity_bridge.cli.UNITY_DIR", unity_dir):
+            with patch("pathlib.Path.cwd", return_value=tmp_path):
+                write_command("test", {})
+
+        captured = capsys.readouterr()
+        assert ".unity-bridge/" not in captured.err
 
 
 if __name__ == "__main__":

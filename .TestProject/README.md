@@ -21,8 +21,7 @@ The `.TestProject/` directory enables:
 ├── Packages/             # Package dependencies
 │   └── manifest.json    # References parent directory as local package
 ├── ProjectSettings/      # Unity project settings (committed to git)
-├── .claude/             # Bridge protocol directory (gitignored, created at runtime)
-│   └── unity/           # Command/response JSON files
+├── .unity-bridge/       # Bridge protocol directory (gitignored, created at runtime)
 ├── .gitignore           # Ignores everything except ProjectSettings & README
 └── README.md            # This file
 ```
@@ -108,11 +107,11 @@ python3 scripts/unity_command.py run-tests --mode EditMode
 
 ### "Unity Editor not detected"
 
-**Cause**: The `.claude/unity/` directory doesn't exist yet.
+**Cause**: The `.unity-bridge/` directory doesn't exist yet.
 
 **Fix**:
 1. Ensure Unity Editor is open with .TestProject loaded
-2. The package should create `.claude/unity/` automatically on startup
+2. The package should create `.unity-bridge/` automatically on startup
 3. Check Unity Console for any `[ClaudeBridge]` errors
 4. Try reopening the project if the directory isn't created
 
@@ -134,7 +133,7 @@ python3 scripts/unity_command.py run-tests --mode EditMode
 1. Check Unity Console for `[ClaudeBridge]` initialization messages
 2. Verify no errors during package initialization
 3. Try restarting Unity Editor
-4. Check if `.claude/unity/` directory exists and is writable
+4. Check if `.unity-bridge/` directory exists and is writable
 
 ## For AI Agents
 
@@ -175,7 +174,7 @@ Only these files are tracked in git (see `.gitignore`):
 - `.gitignore` - Git ignore rules
 - `README.md` - This file
 
-Everything else (Assets/, Library/, Temp/, Logs/, .claude/) is gitignored.
+Everything else (Assets/, Library/, Temp/, Logs/, .unity-bridge/) is gitignored.
 
 ## Adding Test Assets (Optional)
 

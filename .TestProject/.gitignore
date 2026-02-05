@@ -19,5 +19,5 @@ ProjectSettings/*.meta
 !Packages/
 !Packages/manifest.json
 
-# .claude/ is created at runtime by Unity Bridge - always ignore
-.claude/
+# .unity-bridge/ is created at runtime by Unity Bridge - always ignore
+.unity-bridge/

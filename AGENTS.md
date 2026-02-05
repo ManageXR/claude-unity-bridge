@@ -218,24 +218,24 @@ When modifying `unity_command.py`:
 ## File-Based Protocol (Critical Understanding)
 
 ### How It Works
-1. **Python script** writes `UUID + action + params` to `.claude/unity/command.json`
+1. **Python script** writes `UUID + action + params` to `.unity-bridge/command.json`
 2. **Unity Editor** polls for `command.json` via `EditorApplication.update`
 3. **Unity** deletes command file, executes command
-4. **Unity** writes result to `.claude/unity/response-{UUID}.json`
+4. **Unity** writes result to `.unity-bridge/response-{UUID}.json`
 5. **Python script** polls for response file with exponential backoff
 6. **Python script** reads response, formats output, deletes response file
 
 ### Why File-Based?
 - No network configuration needed
 - No port conflicts
-- Multi-project support (each project has own `.claude/unity/` dir)
+- Multi-project support (each project has own `.unity-bridge/` dir)
 - Works across firewalls
 - Simple debugging (just inspect JSON files)
 
 ### File Location Rules
-- **Per-Project**: `.claude/unity/` at Unity project root
+- **Per-Project**: `.unity-bridge/` at Unity project root
 - **Not Global**: Each Unity project has its own directory
-- **Gitignored**: `.claude/` should be in `.gitignore`
+- **Gitignored**: `.unity-bridge/` should be in `.gitignore`
 - **Cleanup**: Old responses cleaned up automatically (1 hour max age)
 
 ## Extending with Custom Commands
@@ -377,9 +377,9 @@ test: Add pytest tests for scene validation
 
 2. **Inspect command/response files**
    ```bash
-   ls -la .claude/unity/
-   cat .claude/unity/command.json
-   cat .claude/unity/response-*.json
+   ls -la .unity-bridge/
+   cat .unity-bridge/command.json
+   cat .unity-bridge/response-*.json
    ```
 
 3. **Check Unity Console**
@@ -437,7 +437,7 @@ test: Add pytest tests for scene validation
 ## Security & Safety
 
 ### File System Safety
-- Only write to `.claude/unity/` directory
+- Only write to `.unity-bridge/` directory
 - Use atomic writes (temp file + replace)
 - Handle file locking gracefully
 - Clean up old files automatically
@@ -457,7 +457,7 @@ test: Add pytest tests for scene validation
 ## Troubleshooting Guide
 
 ### "Unity Editor not detected"
-**Cause**: `.claude/unity/` directory doesn't exist
+**Cause**: `.unity-bridge/` directory doesn't exist
 **Fix**: Ensure Unity Editor is open with project loaded and package installed
 
 ### "Command timed out after 30s"
