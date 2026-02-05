@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Dict, Any
 
 # Constants
-UNITY_DIR = Path.cwd() / ".claude" / "unity"
+UNITY_DIR = Path.cwd() / ".unity-bridge"
 DEFAULT_TIMEOUT = 30
 MIN_SLEEP = 0.1
 MAX_SLEEP = 1.0
@@ -47,6 +47,25 @@ class CommandTimeoutError(UnityCommandError):
     pass
 
 
+def check_gitignore_and_notify():
+    """Print a notice if .unity-bridge/ is not in .gitignore."""
+    gitignore_path = Path.cwd() / ".gitignore"
+
+    if gitignore_path.exists():
+        try:
+            content = gitignore_path.read_text()
+            # Check for various patterns that would ignore the directory
+            if ".unity-bridge" in content:
+                return  # Already ignored
+        except Exception:
+            pass  # If we can't read gitignore, show the notice
+
+    print(
+        "\nNote: Add '.unity-bridge/' to your .gitignore to avoid committing runtime files.\n",
+        file=sys.stderr,
+    )
+
+
 def write_command(action: str, params: Dict[str, Any]) -> str:
     """
     Write command file atomically, return UUID.
@@ -66,13 +85,18 @@ def write_command(action: str, params: Dict[str, Any]) -> str:
 
     # Security: Ensure UNITY_DIR is not a symlink (prevent symlink attacks)
     if UNITY_DIR.exists() and UNITY_DIR.is_symlink():
-        raise UnityCommandError("Security error: .claude/unity cannot be a symlink")
+        raise UnityCommandError("Security error: .unity-bridge cannot be a symlink")
 
     # Ensure directory exists
+    dir_existed = UNITY_DIR.exists()
     try:
         UNITY_DIR.mkdir(parents=True, exist_ok=True)
     except Exception as e:
         raise UnityCommandError(f"Failed to create Unity directory: {e}")
+
+    # Notify about gitignore on first directory creation
+    if not dir_existed:
+        check_gitignore_and_notify()
 
     # Atomic write using temp file
     command_file = UNITY_DIR / "command.json"
@@ -446,7 +470,7 @@ def execute_health_check(timeout: int, verbose: bool) -> int:
     """Verify Unity Bridge is set up correctly."""
     print("Checking Unity Bridge setup...")
 
-    # Check 1: Does .claude/unity directory exist?
+    # Check 1: Does .unity-bridge directory exist?
     if not UNITY_DIR.exists():
         print("✗ Unity Bridge not detected")
         print(f"  Directory not found: {UNITY_DIR}")
