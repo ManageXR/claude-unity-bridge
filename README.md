@@ -17,7 +17,14 @@ File-based bridge enabling Claude Code to trigger Unity Editor operations in a r
 
 ## 🚀 Quick Start
 
-### 1. Install the Unity Package
+### 1. Install
+
+```bash
+pip install claude-unity-bridge
+unity-bridge install-skill
+```
+
+### 2. Add to Your Unity Project(s)
 
 In Unity: `Window > Package Manager > + > Add package from git URL...`
 
@@ -25,25 +32,15 @@ In Unity: `Window > Package Manager > + > Add package from git URL...`
 https://github.com/ManageXR/claude-unity-bridge.git?path=package
 ```
 
-### 2. Install the CLI
+### 3. Use It
 
-```bash
-pip install claude-unity-bridge
+Open Claude Code in your Unity project directory:
+
 ```
-
-### 3. Verify Setup
-
-```bash
-unity-bridge health-check
+"Run the Unity tests"
+"Check for compilation errors"
+"Show me the error logs"
 ```
-
-### 4. Use It
-
-Ask Claude Code naturally:
-
-- "Run the Unity tests in EditMode"
-- "Check if there are any compilation errors"
-- "Show me the error logs from Unity"
 
 Or use the CLI directly:
 
@@ -52,6 +49,14 @@ unity-bridge run-tests --mode EditMode
 unity-bridge compile
 unity-bridge get-console-logs --limit 10
 ```
+
+### Updating
+
+```bash
+unity-bridge update
+```
+
+This upgrades the pip package and reinstalls the Claude Code skill.
 
 ## ⚙️ How It Works
 

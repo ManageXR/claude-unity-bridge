@@ -26,6 +26,11 @@ from claude_unity_bridge.cli import (
     execute_command,
     execute_health_check,
     check_gitignore_and_notify,
+    install_skill,
+    uninstall_skill,
+    get_skill_source_dir,
+    get_skill_target_dir,
+    get_claude_skills_dir,
     main,
     UnityCommandError,
     CommandTimeoutError,
@@ -1173,6 +1178,215 @@ class TestGitignoreNotification:
 
         captured = capsys.readouterr()
         assert ".unity-bridge/" not in captured.err
+
+
+class TestSkillManagement:
+    """Test skill installation/uninstallation commands"""
+
+    def test_get_skill_source_dir_exists(self):
+        """get_skill_source_dir should find the bundled skill directory"""
+        source_dir = get_skill_source_dir()
+        assert source_dir is not None
+        assert source_dir.exists()
+        assert (source_dir / "SKILL.md").exists()
+
+    def test_get_claude_skills_dir(self):
+        """get_claude_skills_dir should return ~/.claude/skills"""
+        skills_dir = get_claude_skills_dir()
+        assert skills_dir == Path.home() / ".claude" / "skills"
+
+    def test_get_skill_target_dir(self):
+        """get_skill_target_dir should return ~/.claude/skills/unity-bridge"""
+        target_dir = get_skill_target_dir()
+        assert target_dir == Path.home() / ".claude" / "skills" / "unity-bridge"
+
+    def test_install_skill_creates_symlink(self, tmp_path, capsys):
+        """install_skill should create a symlink to the skill directory"""
+        skills_dir = tmp_path / "skills"
+
+        with patch.object(Path, "home", return_value=tmp_path / "home"):
+            # Create mock home directory structure
+            (tmp_path / "home" / ".claude").mkdir(parents=True)
+
+            # Patch get_claude_skills_dir to use our temp dir
+            with patch(
+                "claude_unity_bridge.cli.get_claude_skills_dir",
+                return_value=skills_dir,
+            ):
+                with patch(
+                    "claude_unity_bridge.cli.get_skill_target_dir",
+                    return_value=skills_dir / "unity-bridge",
+                ):
+                    result = install_skill(verbose=False)
+
+        assert result == EXIT_SUCCESS
+        assert (skills_dir / "unity-bridge").exists()
+        assert (skills_dir / "unity-bridge").is_symlink()
+
+        captured = capsys.readouterr()
+        assert "Skill installed" in captured.out
+
+    def test_install_skill_replaces_existing_symlink(self, tmp_path, capsys):
+        """install_skill should replace an existing symlink"""
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir(parents=True)
+
+        # Create an old symlink pointing somewhere else
+        old_target = tmp_path / "old_skill"
+        old_target.mkdir()
+        symlink = skills_dir / "unity-bridge"
+        symlink.symlink_to(old_target)
+
+        with patch(
+            "claude_unity_bridge.cli.get_claude_skills_dir",
+            return_value=skills_dir,
+        ):
+            with patch(
+                "claude_unity_bridge.cli.get_skill_target_dir",
+                return_value=symlink,
+            ):
+                result = install_skill(verbose=True)
+
+        assert result == EXIT_SUCCESS
+        assert symlink.exists()
+        assert symlink.is_symlink()
+        # Should point to new location, not old
+        assert symlink.resolve() != old_target
+
+        captured = capsys.readouterr()
+        assert "Removing existing symlink" in captured.err
+
+    def test_install_skill_fails_when_directory_exists(self, tmp_path, capsys):
+        """install_skill should fail when target is a regular directory"""
+        skills_dir = tmp_path / "skills"
+        skill_dir = skills_dir / "unity-bridge"
+        skill_dir.mkdir(parents=True)
+
+        # Put a file in it so it's not empty
+        (skill_dir / "some_file.txt").write_text("test")
+
+        with patch(
+            "claude_unity_bridge.cli.get_claude_skills_dir",
+            return_value=skills_dir,
+        ):
+            with patch(
+                "claude_unity_bridge.cli.get_skill_target_dir",
+                return_value=skill_dir,
+            ):
+                result = install_skill(verbose=False)
+
+        assert result == EXIT_ERROR
+
+        captured = capsys.readouterr()
+        assert "not a symlink" in captured.err
+
+    def test_install_skill_fails_when_source_missing(self, tmp_path, capsys):
+        """install_skill should fail when skill source directory is missing"""
+        with patch(
+            "claude_unity_bridge.cli.get_skill_source_dir",
+            return_value=None,
+        ):
+            result = install_skill(verbose=False)
+
+        assert result == EXIT_ERROR
+
+        captured = capsys.readouterr()
+        assert "Could not find skill files" in captured.err
+
+    def test_uninstall_skill_removes_symlink(self, tmp_path, capsys):
+        """uninstall_skill should remove the symlink"""
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir(parents=True)
+
+        # Create a symlink
+        target = tmp_path / "skill_target"
+        target.mkdir()
+        symlink = skills_dir / "unity-bridge"
+        symlink.symlink_to(target)
+
+        with patch(
+            "claude_unity_bridge.cli.get_skill_target_dir",
+            return_value=symlink,
+        ):
+            result = uninstall_skill(verbose=False)
+
+        assert result == EXIT_SUCCESS
+        assert not symlink.exists()
+
+        captured = capsys.readouterr()
+        assert "Skill uninstalled" in captured.out
+
+    def test_uninstall_skill_idempotent(self, tmp_path, capsys):
+        """uninstall_skill should succeed even when skill is not installed"""
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir(parents=True)
+        symlink = skills_dir / "unity-bridge"
+
+        with patch(
+            "claude_unity_bridge.cli.get_skill_target_dir",
+            return_value=symlink,
+        ):
+            result = uninstall_skill(verbose=False)
+
+        assert result == EXIT_SUCCESS
+
+        captured = capsys.readouterr()
+        assert "not installed" in captured.out
+
+    def test_uninstall_skill_warns_on_directory(self, tmp_path, capsys):
+        """uninstall_skill should warn when target is a directory, not symlink"""
+        skills_dir = tmp_path / "skills"
+        skill_dir = skills_dir / "unity-bridge"
+        skill_dir.mkdir(parents=True)
+
+        with patch(
+            "claude_unity_bridge.cli.get_skill_target_dir",
+            return_value=skill_dir,
+        ):
+            result = uninstall_skill(verbose=False)
+
+        assert result == EXIT_ERROR
+
+        captured = capsys.readouterr()
+        assert "not a symlink" in captured.err
+        assert "rm -rf" in captured.err
+
+    def test_main_install_skill(self, tmp_path, capsys):
+        """Test install-skill command via main()"""
+        skills_dir = tmp_path / "skills"
+
+        with patch("sys.argv", ["unity-bridge", "install-skill"]):
+            with patch(
+                "claude_unity_bridge.cli.get_claude_skills_dir",
+                return_value=skills_dir,
+            ):
+                with patch(
+                    "claude_unity_bridge.cli.get_skill_target_dir",
+                    return_value=skills_dir / "unity-bridge",
+                ):
+                    exit_code = main()
+
+        assert exit_code == EXIT_SUCCESS
+
+    def test_main_uninstall_skill(self, tmp_path, capsys):
+        """Test uninstall-skill command via main()"""
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir(parents=True)
+
+        # Create a symlink to uninstall
+        target = tmp_path / "skill_target"
+        target.mkdir()
+        symlink = skills_dir / "unity-bridge"
+        symlink.symlink_to(target)
+
+        with patch("sys.argv", ["unity-bridge", "uninstall-skill"]):
+            with patch(
+                "claude_unity_bridge.cli.get_skill_target_dir",
+                return_value=symlink,
+            ):
+                exit_code = main()
+
+        assert exit_code == EXIT_SUCCESS
 
 
 if __name__ == "__main__":
