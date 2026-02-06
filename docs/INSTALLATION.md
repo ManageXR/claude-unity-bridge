@@ -8,11 +8,19 @@
 ## Quick Install
 
 ```bash
+curl -sSL https://raw.githubusercontent.com/ManageXR/claude-unity-bridge/main/install.sh | bash
+```
+
+This installs the CLI and Claude Code skill in one command.
+
+## Manual Install
+
+If you prefer not to use curl, or need more control:
+
+```bash
 pip install claude-unity-bridge
 unity-bridge install-skill
 ```
-
-This installs both the CLI tool and the Claude Code skill.
 
 ## Verify Installation
 
@@ -123,13 +131,3 @@ If `unity-bridge` is not found after pip install, the pip scripts directory may 
 
 1. Add the pip scripts directory to your PATH
 2. Use the module directly: `python -m claude_unity_bridge.cli install-skill`
-
-## Alternative: One-Line Install
-
-For a quick install without cloning the repository:
-
-```bash
-curl -sSL https://raw.githubusercontent.com/ManageXR/claude-unity-bridge/main/install.sh | bash
-```
-
-This script runs `pip install` and `install-skill` for you.

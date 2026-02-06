@@ -20,8 +20,7 @@ File-based bridge enabling Claude Code to trigger Unity Editor operations in a r
 ### 1. Install
 
 ```bash
-pip install claude-unity-bridge
-unity-bridge install-skill
+curl -sSL https://raw.githubusercontent.com/ManageXR/claude-unity-bridge/main/install.sh | bash
 ```
 
 ### 2. Add to Your Unity Project(s)
@@ -55,8 +54,6 @@ unity-bridge get-console-logs --limit 10
 ```bash
 unity-bridge update
 ```
-
-This upgrades the pip package and reinstalls the Claude Code skill.
 
 ## ⚙️ How It Works
 
