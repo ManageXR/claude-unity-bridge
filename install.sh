@@ -20,7 +20,7 @@ fi
 
 # Install via pip
 echo "Installing pip package..."
-python3 -m pip install claude-unity-bridge
+python3 -m pip install --upgrade claude-unity-bridge
 
 # Install skill
 echo
@@ -29,6 +29,25 @@ python3 -m claude_unity_bridge.cli install-skill
 
 echo
 echo "Installation complete!"
+echo
+
+# Check if unity-bridge is on PATH
+if command -v unity-bridge &> /dev/null; then
+    echo "Unity commands:"
+    echo "  unity-bridge run-tests"
+    echo "  unity-bridge compile"
+    echo "  unity-bridge get-console-logs"
+else
+    echo "Note: 'unity-bridge' is not on your PATH."
+    echo "You can either:"
+    echo "  1. Add Python scripts to PATH (recommended):"
+    echo "     export PATH=\"\$PATH:\$(python3 -m site --user-base)/bin\""
+    echo "  2. Or use the module directly:"
+    echo "     python3 -m claude_unity_bridge.cli <command>"
+    echo
+    echo "The Claude Code skill works regardless - just ask Claude naturally."
+fi
+
 echo
 echo "Next steps:"
 echo "  1. Add the Unity package to your project:"
