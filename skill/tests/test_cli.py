@@ -28,6 +28,7 @@ from claude_unity_bridge.cli import (
     check_gitignore_and_notify,
     install_skill,
     uninstall_skill,
+    update_package,
     get_skill_source_dir,
     get_skill_target_dir,
     get_claude_skills_dir,
@@ -1385,6 +1386,92 @@ class TestSkillManagement:
                 return_value=symlink,
             ):
                 exit_code = main()
+
+        assert exit_code == EXIT_SUCCESS
+
+    def test_install_skill_fails_when_regular_file_exists(self, tmp_path, capsys):
+        """install_skill should fail when target is a regular file"""
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir(parents=True)
+        target_file = skills_dir / "unity-bridge"
+        target_file.write_text("not a symlink")
+
+        with patch(
+            "claude_unity_bridge.cli.get_claude_skills_dir",
+            return_value=skills_dir,
+        ):
+            with patch(
+                "claude_unity_bridge.cli.get_skill_target_dir",
+                return_value=target_file,
+            ):
+                result = install_skill(verbose=False)
+
+        assert result == EXIT_ERROR
+
+        captured = capsys.readouterr()
+        assert "not a symlink" in captured.err
+        assert "rm " in captured.err
+
+    def test_update_package_success(self, tmp_path, capsys):
+        """update_package should upgrade pip package and reinstall skill"""
+        skills_dir = tmp_path / "skills"
+
+        mock_result = type("Result", (), {"returncode": 0, "stderr": ""})()
+
+        with patch("subprocess.run", return_value=mock_result):
+            with patch(
+                "claude_unity_bridge.cli.get_claude_skills_dir",
+                return_value=skills_dir,
+            ):
+                with patch(
+                    "claude_unity_bridge.cli.get_skill_target_dir",
+                    return_value=skills_dir / "unity-bridge",
+                ):
+                    result = update_package(verbose=False)
+
+        assert result == EXIT_SUCCESS
+
+        captured = capsys.readouterr()
+        assert "Updating" in captured.out
+
+    def test_update_package_pip_failure(self, capsys):
+        """update_package should fail when pip upgrade fails"""
+        mock_result = type("Result", (), {"returncode": 1, "stderr": "pip error"})()
+
+        with patch("subprocess.run", return_value=mock_result):
+            result = update_package(verbose=False)
+
+        assert result == EXIT_ERROR
+
+        captured = capsys.readouterr()
+        assert "pip upgrade failed" in captured.err
+
+    def test_update_package_subprocess_exception(self, capsys):
+        """update_package should handle subprocess exceptions"""
+        with patch("subprocess.run", side_effect=OSError("command not found")):
+            result = update_package(verbose=False)
+
+        assert result == EXIT_ERROR
+
+        captured = capsys.readouterr()
+        assert "Could not run pip" in captured.err
+
+    def test_main_update(self, tmp_path, capsys):
+        """Test update command via main()"""
+        skills_dir = tmp_path / "skills"
+        mock_result = type("Result", (), {"returncode": 0, "stderr": ""})()
+
+        with patch("sys.argv", ["unity-bridge", "update"]):
+            with patch("subprocess.run", return_value=mock_result):
+                with patch(
+                    "claude_unity_bridge.cli.get_claude_skills_dir",
+                    return_value=skills_dir,
+                ):
+                    with patch(
+                        "claude_unity_bridge.cli.get_skill_target_dir",
+                        return_value=skills_dir / "unity-bridge",
+                    ):
+                        exit_code = main()
 
         assert exit_code == EXIT_SUCCESS
 
