@@ -558,6 +558,11 @@ def install_skill(verbose: bool = False) -> int:
             print("Remove it manually if you want to use symlink installation.", file=sys.stderr)
             print(f"  rm -rf {target_dir}", file=sys.stderr)
             return EXIT_ERROR
+        else:
+            print(f"Warning: {target_dir} exists and is not a symlink.", file=sys.stderr)
+            print("Remove it manually if you want to use symlink installation.", file=sys.stderr)
+            print(f"  rm {target_dir}", file=sys.stderr)
+            return EXIT_ERROR
 
     # Create symlink
     try:
