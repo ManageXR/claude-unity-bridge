@@ -5,6 +5,32 @@ All notable changes to the Claude Unity Bridge package will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-02-06
+
+### Fixed
+
+- Handle regular file (not just directory) at install target path
+- Sync all version files (pyproject.toml, __init__.py, package.json)
+
+### Added
+
+- Tests for `update_package` function (success, pip failure, subprocess exception, CLI integration)
+- Test for regular file detection in `install_skill`
+
+## [0.1.2] - 2026-02-05
+
+### Added
+
+- PyPI publish workflow (automated on tag push)
+- Bootstrap installer (`install.sh`) for one-command setup
+- `install-skill` and `update` CLI subcommands
+- PATH detection and auto-configuration in installer
+
+### Changed
+
+- Promoted one-liner install as primary installation approach
+- Excluded CHANGELOG.md.meta from package distribution
+
 ## [0.1.1] - 2026-02-04
 
 ### Fixed
@@ -44,5 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Editor-only package (no runtime impact)
 - Automatic initialization via `[InitializeOnLoad]`
 
+[0.1.3]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.3
+[0.1.2]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.2
 [0.1.1]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.1
 [0.1.0]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.0
