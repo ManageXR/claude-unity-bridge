@@ -5,22 +5,24 @@
 - Unity 2021.3 or later
 - Python 3.8 or later (for the CLI)
 
-## Unity Bridge CLI
+## Quick Install
 
-### Via pip (Recommended)
+```bash
+curl -sSL https://raw.githubusercontent.com/ManageXR/claude-unity-bridge/main/install.sh | bash
+```
+
+This installs the CLI and Claude Code skill in one command.
+
+## Manual Install
+
+If you prefer not to use curl, or need more control:
 
 ```bash
 pip install claude-unity-bridge
+unity-bridge install-skill
 ```
 
-### For Development
-
-```bash
-cd claude-unity-bridge/skill
-pip install -e ".[dev]"
-```
-
-### Verify Installation
+## Verify Installation
 
 ```bash
 unity-bridge --help
@@ -62,36 +64,70 @@ Add this line to your project's `Packages/manifest.json`:
 }
 ```
 
-## Claude Code Skill
+## CLI Commands
 
-For a better user experience, install the companion Claude Code skill.
-
-### Option 1: Using GNU Stow (recommended)
-
-If you have [GNU Stow](https://www.gnu.org/software/stow/) installed:
+### Skill Management
 
 ```bash
-cd /path/to/claude-unity-bridge
-stow -t ~/.claude/skills/unity -d . skill
+# Install the Claude Code skill
+unity-bridge install-skill
+
+# Uninstall the Claude Code skill
+unity-bridge uninstall-skill
+
+# Update package and reinstall skill
+unity-bridge update
 ```
 
-To uninstall:
-```bash
-stow -t ~/.claude/skills/unity -d . -D skill
-```
+The skill is installed as a symlink to `~/.claude/skills/unity-bridge/`, pointing to the bundled skill files in the pip package.
 
-### Option 2: Using symlink
-
-```bash
-ln -s "$(pwd)/skill" ~/.claude/skills/unity
-```
-
-### Option 3: Copy (not recommended)
+### Unity Commands
 
 ```bash
-cp -r skill ~/.claude/skills/unity
+unity-bridge run-tests --mode EditMode
+unity-bridge compile
+unity-bridge get-console-logs --limit 10
+unity-bridge get-status
+unity-bridge refresh
+unity-bridge health-check
 ```
 
-Both Stow and symlink keep the skill updated automatically when you pull changes from git.
+## Updating
 
-Restart Claude Code after installation. The skill will auto-activate when you're working in a Unity project directory.
+```bash
+unity-bridge update
+```
+
+This runs `pip install --upgrade claude-unity-bridge` and reinstalls the skill to ensure the symlink points to the updated package.
+
+Or manually:
+
+```bash
+pip install --upgrade claude-unity-bridge
+unity-bridge install-skill
+```
+
+## Uninstalling
+
+```bash
+unity-bridge uninstall-skill
+pip uninstall claude-unity-bridge
+```
+
+## Development Installation
+
+For contributing to the project:
+
+```bash
+git clone https://github.com/ManageXR/claude-unity-bridge.git
+cd claude-unity-bridge/skill
+pip install -e ".[dev]"
+unity-bridge install-skill
+```
+
+## PATH Issues
+
+If `unity-bridge` is not found after pip install, the pip scripts directory may not be in your PATH. You can:
+
+1. Add the pip scripts directory to your PATH
+2. Use the module directly: `python -m claude_unity_bridge.cli install-skill`

@@ -4,15 +4,18 @@ Claude Unity Bridge - Command Execution Script
 
 Rock-solid, deterministic command execution for Unity Editor operations.
 Handles UUID generation, file-based polling, response parsing, and cleanup.
+
+Also provides skill installation commands for Claude Code integration.
 """
 
 import argparse
 import json
+import subprocess
 import sys
 import time
 import uuid
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 # Constants
 UNITY_DIR = Path.cwd() / ".unity-bridge"
@@ -466,6 +469,177 @@ def execute_command(
     return formatted
 
 
+def get_skill_source_dir() -> Optional[Path]:
+    """
+    Find the skill directory bundled with this package.
+
+    Returns:
+        Path to the skill directory, or None if not found.
+    """
+    # Try using importlib.resources (Python 3.9+)
+    try:
+        import importlib.resources as resources
+
+        # For Python 3.9+
+        if hasattr(resources, "files"):
+            package_dir = resources.files("claude_unity_bridge")
+            skill_dir = Path(str(package_dir)) / "skill"
+            if skill_dir.exists():
+                return skill_dir
+    except (ImportError, TypeError):
+        pass
+
+    # Fallback: use __file__ to locate the package
+    package_dir = Path(__file__).parent
+    skill_dir = package_dir / "skill"
+    if skill_dir.exists():
+        return skill_dir
+
+    return None
+
+
+def get_claude_skills_dir() -> Path:
+    """Get the Claude Code skills directory path."""
+    return Path.home() / ".claude" / "skills"
+
+
+def get_skill_target_dir() -> Path:
+    """Get the target directory for the unity-bridge skill."""
+    return get_claude_skills_dir() / "unity-bridge"
+
+
+def install_skill(verbose: bool = False) -> int:
+    """
+    Install the Claude Code skill by creating a symlink.
+
+    Returns:
+        Exit code (0 for success, 1 for error).
+    """
+    source_dir = get_skill_source_dir()
+    if source_dir is None:
+        print("Error: Could not find skill files in package.", file=sys.stderr)
+        print("This may indicate a corrupted installation.", file=sys.stderr)
+        print(
+            "Try reinstalling: pip install --force-reinstall claude-unity-bridge", file=sys.stderr
+        )
+        return EXIT_ERROR
+
+    if verbose:
+        print(f"Skill source: {source_dir}", file=sys.stderr)
+
+    # Verify SKILL.md exists
+    skill_md = source_dir / "SKILL.md"
+    if not skill_md.exists():
+        print(f"Error: SKILL.md not found at {skill_md}", file=sys.stderr)
+        return EXIT_ERROR
+
+    # Create skills directory if it doesn't exist
+    skills_dir = get_claude_skills_dir()
+    try:
+        skills_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        print(f"Error: Could not create skills directory: {e}", file=sys.stderr)
+        return EXIT_ERROR
+
+    target_dir = get_skill_target_dir()
+
+    # Remove existing symlink or directory
+    if target_dir.exists() or target_dir.is_symlink():
+        if target_dir.is_symlink():
+            if verbose:
+                print(f"Removing existing symlink: {target_dir}", file=sys.stderr)
+            try:
+                target_dir.unlink()
+            except Exception as e:
+                print(f"Error: Could not remove existing symlink: {e}", file=sys.stderr)
+                return EXIT_ERROR
+        elif target_dir.is_dir():
+            print(f"Warning: {target_dir} exists and is not a symlink.", file=sys.stderr)
+            print("Remove it manually if you want to use symlink installation.", file=sys.stderr)
+            print(f"  rm -rf {target_dir}", file=sys.stderr)
+            return EXIT_ERROR
+
+    # Create symlink
+    try:
+        target_dir.symlink_to(source_dir)
+    except Exception as e:
+        print(f"Error: Could not create symlink: {e}", file=sys.stderr)
+        return EXIT_ERROR
+
+    print(f"✓ Skill installed: {target_dir} -> {source_dir}")
+    print()
+    print("The Claude Code skill is now available.")
+    print("Restart Claude Code to load the skill, then ask Claude naturally:")
+    print('  "Run the Unity tests"')
+    print('  "Check for compilation errors"')
+    print()
+
+    return EXIT_SUCCESS
+
+
+def uninstall_skill(verbose: bool = False) -> int:
+    """
+    Uninstall the Claude Code skill by removing the symlink.
+
+    Returns:
+        Exit code (0 for success, 1 for error).
+    """
+    target_dir = get_skill_target_dir()
+
+    if not target_dir.exists() and not target_dir.is_symlink():
+        print("Skill is not installed.")
+        return EXIT_SUCCESS
+
+    if target_dir.is_symlink():
+        try:
+            target_dir.unlink()
+            print(f"✓ Skill uninstalled: removed {target_dir}")
+            return EXIT_SUCCESS
+        except Exception as e:
+            print(f"Error: Could not remove symlink: {e}", file=sys.stderr)
+            return EXIT_ERROR
+    else:
+        print(f"Warning: {target_dir} exists but is not a symlink.", file=sys.stderr)
+        print("Remove it manually if desired:", file=sys.stderr)
+        print(f"  rm -rf {target_dir}", file=sys.stderr)
+        return EXIT_ERROR
+
+
+def update_package(verbose: bool = False) -> int:
+    """
+    Update the package via pip and reinstall the skill.
+
+    Returns:
+        Exit code (0 for success, 1 for error).
+    """
+    print("Updating claude-unity-bridge...")
+
+    try:
+        # Run pip install --upgrade
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--upgrade", "claude-unity-bridge"],
+            capture_output=not verbose,
+            text=True,
+        )
+
+        if result.returncode != 0:
+            print("Error: pip upgrade failed.", file=sys.stderr)
+            if not verbose and result.stderr:
+                print(result.stderr, file=sys.stderr)
+            return EXIT_ERROR
+
+        if verbose:
+            print("Package upgraded successfully.", file=sys.stderr)
+
+    except Exception as e:
+        print(f"Error: Could not run pip: {e}", file=sys.stderr)
+        return EXIT_ERROR
+
+    # Reinstall skill to ensure symlink points to updated package
+    print("Reinstalling skill...")
+    return install_skill(verbose)
+
+
 def execute_health_check(timeout: int, verbose: bool) -> int:
     """Verify Unity Bridge is set up correctly."""
     print("Checking Unity Bridge setup...")
@@ -499,13 +673,18 @@ def main():
         description="Execute Unity Editor commands via Claude Unity Bridge",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Commands:
+Unity Commands:
   run-tests          Run Unity tests
   compile            Trigger script compilation
   refresh            Refresh asset database
   get-status         Get editor status
   get-console-logs   Get Unity console logs
   health-check       Verify Unity Bridge setup
+
+Skill Commands:
+  install-skill      Install Claude Code skill
+  uninstall-skill    Uninstall Claude Code skill
+  update             Update package and reinstall skill
 
 Examples:
   %(prog)s run-tests --mode EditMode --filter "MyTests"
@@ -514,6 +693,7 @@ Examples:
   %(prog)s get-status
   %(prog)s refresh
   %(prog)s health-check
+  %(prog)s install-skill
         """,
     )
 
@@ -526,6 +706,9 @@ Examples:
             "get-status",
             "get-console-logs",
             "health-check",
+            "install-skill",
+            "uninstall-skill",
+            "update",
         ],
         help="Command to execute",
     )
@@ -558,7 +741,17 @@ Examples:
 
     args = parser.parse_args()
 
-    # Validate timeout
+    # Handle skill management commands first (they don't need timeout validation)
+    if args.command == "install-skill":
+        return install_skill(args.verbose)
+
+    if args.command == "uninstall-skill":
+        return uninstall_skill(args.verbose)
+
+    if args.command == "update":
+        return update_package(args.verbose)
+
+    # Validate timeout (only for Unity commands)
     if args.timeout <= 0:
         parser.error("--timeout must be a positive integer")
 
