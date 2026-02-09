@@ -32,6 +32,7 @@ from claude_unity_bridge.cli import (
     get_skill_source_dir,
     get_skill_target_dir,
     get_claude_skills_dir,
+    _validate_command_id,
     main,
     UnityCommandError,
     CommandTimeoutError,
@@ -285,7 +286,7 @@ class TestWaitForResponse:
 
     def test_wait_for_response_success(self, tmp_path):
         with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
-            command_id = "test-123"
+            command_id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
             response_data = {"id": command_id, "status": "success", "action": "test"}
 
             # Create response file
@@ -302,7 +303,7 @@ class TestWaitForResponse:
             tmp_path.mkdir(exist_ok=True)
 
             with pytest.raises(CommandTimeoutError) as exc_info:
-                wait_for_response("nonexistent-id", timeout=1)
+                wait_for_response("b2c3d4e5-f6a7-8901-bcde-f12345678901", timeout=1)
 
             assert "timed out after 1s" in str(exc_info.value)
 
@@ -311,7 +312,7 @@ class TestWaitForResponse:
         nonexistent_dir = tmp_path / "does-not-exist"
         with patch("claude_unity_bridge.cli.UNITY_DIR", nonexistent_dir):
             with pytest.raises(UnityNotRunningError) as exc_info:
-                wait_for_response("test-id", timeout=1)
+                wait_for_response("c3d4e5f6-a7b8-9012-cdef-123456789012", timeout=1)
 
             assert "Unity Editor not detected" in str(exc_info.value)
 
@@ -504,7 +505,7 @@ class TestCleanupResponseFile:
 
     def test_cleanup_existing_file(self, tmp_path):
         with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
-            command_id = "test-cleanup-123"
+            command_id = "d4e5f6a7-b8c9-0123-defa-234567890123"
             response_file = tmp_path / f"response-{command_id}.json"
             response_file.write_text('{"id": "test"}')
 
@@ -514,11 +515,11 @@ class TestCleanupResponseFile:
     def test_cleanup_nonexistent_file(self, tmp_path):
         with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             # Should not raise error
-            cleanup_response_file("nonexistent-id")
+            cleanup_response_file("e5f6a7b8-c9d0-1234-efab-345678901234")
 
     def test_cleanup_with_verbose(self, tmp_path, capsys):
         with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
-            command_id = "test-verbose-123"
+            command_id = "f6a7b8c9-d0e1-2345-fabc-456789012345"
             response_file = tmp_path / f"response-{command_id}.json"
             response_file.write_text('{"id": "test"}')
 
@@ -577,7 +578,7 @@ class TestWaitForResponseEdgeCases:
 
     def test_wait_verbose_polling(self, tmp_path, capsys):
         with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
-            command_id = "test-verbose-poll"
+            command_id = "a7b8c9d0-e1f2-3456-abcd-567890123456"
             response_data = {"id": command_id, "status": "success"}
 
             # Create response file after a small delay
@@ -599,7 +600,7 @@ class TestWaitForResponseEdgeCases:
     def test_wait_json_decode_error_recovery(self, tmp_path, capsys):
         """Test that mid-write JSON errors are retried once"""
         with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
-            command_id = "test-json-error"
+            command_id = "b8c9d0e1-f2a3-4567-bcde-678901234567"
             response_file = tmp_path / f"response-{command_id}.json"
 
             # Write invalid JSON initially (will be overwritten)
@@ -621,7 +622,7 @@ class TestWaitForResponseEdgeCases:
     def test_wait_json_decode_error_persistent(self, tmp_path, capsys):
         """Test that persistent JSON errors raise an exception"""
         with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
-            command_id = "test-json-persistent"
+            command_id = "c9d0e1f2-a3b4-5678-cdef-789012345678"
             response_file = tmp_path / f"response-{command_id}.json"
 
             # Write invalid JSON that stays invalid
@@ -822,7 +823,7 @@ class TestMainFunction:
             with patch("sys.argv", argv):
                 # Create response immediately
                 def mock_write(action, params):
-                    command_id = "test-main-123"
+                    command_id = "d0e1f2a3-b4c5-6789-defa-890123456789"
                     response_file = tmp_path / f"response-{command_id}.json"
                     response_file.write_text(
                         json.dumps(
@@ -858,7 +859,7 @@ class TestMainFunction:
                 def mock_write(action, params):
                     assert params.get("limit") == "10"
                     assert params.get("filter") == "Error"
-                    command_id = "test-logs-123"
+                    command_id = "e1f2a3b4-c5d6-7890-efab-901234567890"
                     response_file = tmp_path / f"response-{command_id}.json"
                     response_file.write_text(
                         json.dumps(
@@ -905,7 +906,10 @@ class TestMainFunction:
                 # Mock write_command to return an ID without creating the directory
                 # This simulates the case where the command file can't be written
                 # because Unity never created the directory structure
-                with patch("claude_unity_bridge.cli.write_command", return_value="mock-id"):
+                with patch(
+                    "claude_unity_bridge.cli.write_command",
+                    return_value="f2a3b4c5-d6e7-8901-fabc-012345678901",
+                ):
                     exit_code = main()
                     assert exit_code == EXIT_ERROR
 
@@ -1024,7 +1028,7 @@ class TestArgumentValidation:
 
                 def mock_write(action, params):
                     assert params.get("limit") == "1"  # String for C# compatibility
-                    command_id = "test-limit-1"
+                    command_id = "a3b4c5d6-e7f8-9012-abcd-123456789abc"
                     response_file = tmp_path / f"response-{command_id}.json"
                     response_file.write_text(
                         json.dumps(
@@ -1048,7 +1052,7 @@ class TestArgumentValidation:
 
                 def mock_write_1000(action, params):
                     assert params.get("limit") == "1000"  # String for C# compatibility
-                    command_id = "test-limit-1000"
+                    command_id = "b4c5d6e7-f8a9-0123-bcde-234567890bcd"
                     response_file = tmp_path / f"response-{command_id}.json"
                     response_file.write_text(
                         json.dumps(
@@ -1474,6 +1478,56 @@ class TestSkillManagement:
                         exit_code = main()
 
         assert exit_code == EXIT_SUCCESS
+
+
+class TestUUIDValidation:
+    """Test UUID validation for command IDs"""
+
+    def test_valid_uuid_accepted(self):
+        """Valid UUID format should not raise"""
+        _validate_command_id("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+
+    def test_invalid_uuid_rejected(self):
+        """Non-UUID strings should raise UnityCommandError"""
+        with pytest.raises(UnityCommandError, match="Invalid command ID format"):
+            _validate_command_id("not-a-uuid")
+
+    def test_path_traversal_rejected(self):
+        """Path traversal attempts should be rejected"""
+        with pytest.raises(UnityCommandError, match="Invalid command ID format"):
+            _validate_command_id("../../etc/passwd")
+
+    def test_empty_string_rejected(self):
+        """Empty string should be rejected"""
+        with pytest.raises(UnityCommandError, match="Invalid command ID format"):
+            _validate_command_id("")
+
+    def test_uuid_with_extra_chars_rejected(self):
+        """UUID with trailing path components should be rejected"""
+        with pytest.raises(UnityCommandError, match="Invalid command ID format"):
+            _validate_command_id("a1b2c3d4-e5f6-7890-abcd-ef1234567890/../secret")
+
+    def test_wait_for_response_validates_id(self, tmp_path):
+        """wait_for_response should reject invalid command IDs"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            with pytest.raises(UnityCommandError, match="Invalid command ID format"):
+                wait_for_response("../../etc/passwd", timeout=1)
+
+    def test_cleanup_response_file_validates_id(self, tmp_path):
+        """cleanup_response_file should reject invalid command IDs"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            with pytest.raises(UnityCommandError, match="Invalid command ID format"):
+                cleanup_response_file("../../etc/passwd")
+
+    def test_response_id_mismatch_rejected(self, tmp_path):
+        """Response with mismatched ID should raise UnityCommandError"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            command_id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+            response_file = tmp_path / f"response-{command_id}.json"
+            response_file.write_text(json.dumps({"id": "different-id", "status": "success"}))
+
+            with pytest.raises(UnityCommandError, match="Response ID mismatch"):
+                wait_for_response(command_id, timeout=1)
 
 
 if __name__ == "__main__":
