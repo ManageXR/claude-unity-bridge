@@ -107,7 +107,8 @@ def write_command(action: str, params: Dict[str, Any]) -> str:
     dir_existed = UNITY_DIR.exists()
     try:
         UNITY_DIR.mkdir(parents=True, exist_ok=True)
-        os.chmod(UNITY_DIR, 0o700)
+        if sys.platform != "win32":
+            os.chmod(UNITY_DIR, 0o700)
     except Exception as e:
         raise UnityCommandError(f"Failed to create Unity directory: {e}")
 
@@ -121,7 +122,8 @@ def write_command(action: str, params: Dict[str, Any]) -> str:
 
     try:
         temp_file.write_text(json.dumps(command, indent=2))
-        os.chmod(temp_file, 0o600)
+        if sys.platform != "win32":
+            os.chmod(temp_file, 0o600)
         temp_file.replace(command_file)
     except Exception as e:
         # Cleanup temp file if it exists
