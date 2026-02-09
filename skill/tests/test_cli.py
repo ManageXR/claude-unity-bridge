@@ -5,6 +5,7 @@ Run with: pytest skill/tests/test_cli.py
 """
 
 import json
+import sys
 import time
 from pathlib import Path
 from unittest.mock import patch
@@ -1528,6 +1529,34 @@ class TestUUIDValidation:
 
             with pytest.raises(UnityCommandError, match="Response ID mismatch"):
                 wait_for_response(command_id, timeout=1)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX permissions not supported on Windows")
+class TestDirectoryPermissions:
+    """Test that .unity-bridge/ directory and files get restrictive permissions"""
+
+    def test_directory_created_with_0700_permissions(self, tmp_path):
+        import os
+        import stat
+
+        unity_dir = tmp_path / ".unity-bridge"
+        with patch("claude_unity_bridge.cli.UNITY_DIR", unity_dir):
+            write_command("test-action", {"param": "value"})
+        mode = os.stat(unity_dir).st_mode
+        dir_perms = stat.S_IMODE(mode)
+        assert dir_perms == 0o700, f"Expected 0o700, got {oct(dir_perms)}"
+
+    def test_command_file_has_0600_permissions(self, tmp_path):
+        import os
+        import stat
+
+        unity_dir = tmp_path / ".unity-bridge"
+        with patch("claude_unity_bridge.cli.UNITY_DIR", unity_dir):
+            write_command("test-action", {"param": "value"})
+        command_file = unity_dir / "command.json"
+        mode = os.stat(command_file).st_mode
+        file_perms = stat.S_IMODE(mode)
+        assert file_perms == 0o600, f"Expected 0o600, got {oct(file_perms)}"
 
 
 if __name__ == "__main__":
