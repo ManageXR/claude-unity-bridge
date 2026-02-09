@@ -22,3 +22,15 @@ __pycache__/
 *.egg-info/
 .coverage
 htmlcov/
+
+# Bridge runtime directory
+.unity-bridge/
+
+# Secrets and environment files
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+secrets.yaml
+secrets.yml

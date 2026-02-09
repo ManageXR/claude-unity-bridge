@@ -4,7 +4,7 @@
 repos:
   # Python formatting with black
   - repo: https://github.com/psf/black
-    rev: 24.4.2
+    rev: 3702ba224ecffbcec30af640c149f231d90aebdb  # 24.4.2
     hooks:
       - id: black
         files: ^skill/
@@ -12,7 +12,7 @@ repos:
 
   # Python linting with flake8
   - repo: https://github.com/pycqa/flake8
-    rev: 7.0.0
+    rev: 88a4f9b2f48fc44b025a48fa6a8ac7cc89ef70e0  # 7.0.0
     hooks:
       - id: flake8
         files: ^skill/
@@ -20,7 +20,7 @@ repos:
 
   # General file hygiene
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: 2c9f875913ee60ca25ce70243dc24d5b6415598c  # v4.6.0
     hooks:
       - id: trailing-whitespace
         exclude: ^(package/|\.TestProject/)
@@ -35,7 +35,7 @@ repos:
 
   # Check for common Python issues
   - repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.10.0
+    rev: 3a6eb0fadf60b3cccfd80bad9dbb6fae7e47b316  # v1.10.0
     hooks:
       - id: python-check-blanket-noqa
         files: ^skill/
