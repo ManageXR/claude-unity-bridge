@@ -46,6 +46,17 @@ namespace MXR.ClaudeBridge {
         private static void EnsureDirectoryExists() {
             if (!Directory.Exists(CommandDir)) {
                 Directory.CreateDirectory(CommandDir);
+#if UNITY_EDITOR_LINUX || UNITY_EDITOR_OSX
+                try {
+                    var chmod = new System.Diagnostics.Process();
+                    chmod.StartInfo.FileName = "chmod";
+                    chmod.StartInfo.Arguments = $"700 \"{CommandDir}\"";
+                    chmod.StartInfo.UseShellExecute = false;
+                    chmod.StartInfo.CreateNoWindow = true;
+                    chmod.Start();
+                    chmod.WaitForExit(1000);
+                } catch (System.Exception) { }
+#endif
             }
         }
 
@@ -166,6 +177,17 @@ namespace MXR.ClaudeBridge {
 
                 // Atomic write: write to temp file then rename
                 File.WriteAllText(tempPath, json);
+#if UNITY_EDITOR_LINUX || UNITY_EDITOR_OSX
+                try {
+                    var chmod = new System.Diagnostics.Process();
+                    chmod.StartInfo.FileName = "chmod";
+                    chmod.StartInfo.Arguments = $"600 \"{tempPath}\"";
+                    chmod.StartInfo.UseShellExecute = false;
+                    chmod.StartInfo.CreateNoWindow = true;
+                    chmod.Start();
+                    chmod.WaitForExit(1000);
+                } catch (System.Exception) { }
+#endif
                 if (File.Exists(responsePath)) {
                     File.Delete(responsePath);
                 }
