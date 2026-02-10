@@ -23,6 +23,13 @@ namespace MXR.ClaudeBridge {
         // Security: Only allow alphanumeric characters and hyphens in response IDs
         private static readonly Regex ValidIdPattern = new Regex(@"^[a-fA-F0-9\-]+$", RegexOptions.Compiled);
 
+        // Read-only commands that are safe to execute during compilation/updating.
+        // These only read EditorApplication state or console logs — they never mutate anything.
+        private static readonly HashSet<string> SafeDuringCompileCommands = new HashSet<string> {
+            "get-status",
+            "get-console-logs"
+        };
+
         static ClaudeBridge() {
             CommandDir = Path.Combine(Application.dataPath, "..", ".unity-bridge");
             CommandFilePath = Path.Combine(CommandDir, "command.json");
@@ -61,8 +68,9 @@ namespace MXR.ClaudeBridge {
         }
 
         private static void PollForCommands() {
-            if (EditorApplication.isCompiling || EditorApplication.isUpdating) return;
             if (!File.Exists(CommandFilePath)) return;
+
+            bool isBusyEditor = EditorApplication.isCompiling || EditorApplication.isUpdating;
 
             // Auto-recover from stuck processing state
             if (_isProcessingCommand) {
@@ -76,7 +84,15 @@ namespace MXR.ClaudeBridge {
                 }
             }
 
-            ProcessCommand();
+            // When compiling/updating, only allow safe read-only commands through.
+            // Other commands get a busy response so the CLI doesn't hang.
+            if (isBusyEditor) {
+                if (!TryProcessSafeCommand()) {
+                    return;
+                }
+            } else {
+                ProcessCommand();
+            }
         }
 
         private static void TryRespondBusy() {
@@ -95,6 +111,43 @@ namespace MXR.ClaudeBridge {
             catch (Exception e) {
                 Debug.LogError($"[ClaudeBridge] Error handling busy response: {e.Message}");
                 DeleteCommandFile();
+            }
+        }
+
+        /// <summary>
+        /// Peeks at the command file to check if it's a safe read-only command.
+        /// If safe, processes it normally. If not, responds with a busy/compiling error.
+        /// Returns true if the command was handled (either processed or rejected).
+        /// </summary>
+        private static bool TryProcessSafeCommand() {
+            try {
+                var json = File.ReadAllText(CommandFilePath);
+                var request = JsonUtility.FromJson<CommandRequest>(json);
+
+                if (request == null || string.IsNullOrEmpty(request.id) || string.IsNullOrEmpty(request.action)) {
+                    // Malformed command — let ProcessCommand handle the error path
+                    ProcessCommand();
+                    return true;
+                }
+
+                if (SafeDuringCompileCommands.Contains(request.action)) {
+                    // Safe command — process it normally
+                    ProcessCommand();
+                    return true;
+                }
+
+                // Mutating command during compilation — reject with informative error
+                DeleteCommandFile();
+                var state = EditorApplication.isCompiling ? "compiling" : "updating";
+                Debug.LogWarning($"[ClaudeBridge] Rejecting command {request.action} ({request.id}) - Unity is {state}");
+                WriteResponse(CommandResponse.Error(request.id, request.action,
+                    $"Unity Editor is currently {state}. Only read-only commands (get-status, get-console-logs) are available. Try again later."));
+                return true;
+            }
+            catch (Exception e) {
+                Debug.LogError($"[ClaudeBridge] Error peeking at command during compile: {e.Message}");
+                DeleteCommandFile();
+                return true;
             }
         }
 
