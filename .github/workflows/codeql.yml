@@ -1,0 +1,39 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '17 4 * * 1'
+
+permissions:
+  security-events: write
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze Python
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@45cbd0c69e560cd9e7cd7f8c32362050c9b7ded2 # v4.32.2
+      with:
+        languages: python
+        # C# is excluded because this repo's C# code is a Unity Editor package
+        # that depends on UnityEngine/UnityEditor assemblies. These cannot be
+        # resolved without the Unity SDK, causing CodeQL's build-mode: none to
+        # produce low-quality analysis (50% call targets, 74% typed expressions).
+        # Python is the only language that can be meaningfully analyzed in CI.
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@45cbd0c69e560cd9e7cd7f8c32362050c9b7ded2 # v4.32.2
+      with:
+        category: "/language:python"
