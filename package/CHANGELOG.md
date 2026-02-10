@@ -5,6 +5,27 @@ All notable changes to the Claude Unity Bridge package will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-02-09
+
+### Security
+
+- Restrict `.unity-bridge/` directory and file permissions to owner-only on POSIX systems
+- Add UUID validation for command IDs to prevent path traversal attacks
+- Verify response ID matches expected command ID to prevent response spoofing
+- Pin GitHub Actions to commit SHAs to prevent supply chain attacks
+- Pin pre-commit hooks to commit SHAs
+
+### Added
+
+- Dependabot configuration for automated dependency updates (GitHub Actions + pip)
+- `.gitignore` entries for `.unity-bridge/`, `.env`, and secret file patterns
+- CODEOWNERS for `@ManageXR/unity-external` team
+
+### Changed
+
+- Bumped dev dependencies: black 25.11.0, pytest 8.4.2, pytest-cov 7.0.0, flake8 7.3.0, pre-commit 4.3.0
+- Bumped CI dependencies: actions/checkout 6.0.2, actions/setup-python 6.2.0, codecov/codecov-action 5.5.2
+
 ## [0.1.3] - 2026-02-06
 
 ### Fixed
@@ -70,6 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Editor-only package (no runtime impact)
 - Automatic initialization via `[InitializeOnLoad]`
 
+[0.1.4]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.4
 [0.1.3]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.3
 [0.1.2]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.2
 [0.1.1]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.1
