@@ -10,6 +10,7 @@ Also provides skill installation commands for Claude Code integration.
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import time
@@ -48,6 +49,17 @@ class CommandTimeoutError(UnityCommandError):
     """Command execution timed out"""
 
     pass
+
+
+UUID_PATTERN = re.compile(
+    r"^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+)
+
+
+def _validate_command_id(command_id: str) -> None:
+    """Validate command_id is a proper UUID to prevent path traversal."""
+    if not UUID_PATTERN.match(command_id):
+        raise UnityCommandError("Invalid command ID format")
 
 
 def check_gitignore_and_notify():
@@ -136,6 +148,7 @@ def wait_for_response(command_id: str, timeout: int, verbose: bool = False) -> D
         CommandTimeoutError: If timeout is reached
         UnityCommandError: If response parsing fails
     """
+    _validate_command_id(command_id)
     response_file = UNITY_DIR / f"response-{command_id}.json"
 
     start = time.time()
@@ -151,7 +164,11 @@ def wait_for_response(command_id: str, timeout: int, verbose: bool = False) -> D
 
             try:
                 response_text = response_file.read_text()
-                return json.loads(response_text)
+                result = json.loads(response_text)
+                response_id = result.get("id", "")
+                if response_id != command_id:
+                    raise UnityCommandError(f"Response ID mismatch: expected {command_id}")
+                return result
             except json.JSONDecodeError:
                 # Might have caught it mid-write, retry once
                 if verbose:
@@ -159,12 +176,18 @@ def wait_for_response(command_id: str, timeout: int, verbose: bool = False) -> D
                 time.sleep(0.2)
                 try:
                     response_text = response_file.read_text()
-                    return json.loads(response_text)
+                    result = json.loads(response_text)
+                    response_id = result.get("id", "")
+                    if response_id != command_id:
+                        raise UnityCommandError(f"Response ID mismatch: expected {command_id}")
+                    return result
                 except json.JSONDecodeError as e:
                     # Log raw response for debugging
                     print("Error: Invalid JSON in response file", file=sys.stderr)
                     print(f"Raw response: {response_text}", file=sys.stderr)
                     raise UnityCommandError(f"Failed to parse response JSON: {e}")
+            except UnityCommandError:
+                raise
             except Exception as e:
                 raise UnityCommandError(f"Failed to read response file: {e}")
 
@@ -413,6 +436,7 @@ def cleanup_response_file(command_id: str, verbose: bool = False):
         command_id: UUID of the command
         verbose: Print cleanup progress
     """
+    _validate_command_id(command_id)
     response_file = UNITY_DIR / f"response-{command_id}.json"
 
     try:
