@@ -6,7 +6,7 @@ pytest==8.4.2
 pytest-cov==7.0.0
 
 # Linting and formatting (matching pre-commit versions)
-black==24.4.2
+black==25.11.0
 flake8==7.3.0
 
 # Pre-commit hook framework
