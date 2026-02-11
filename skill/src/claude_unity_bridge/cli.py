@@ -404,7 +404,7 @@ def format_generic_response(response: Dict[str, Any], status: str, duration: flo
 
 def cleanup_old_responses(max_age_hours: int = 1, verbose: bool = False):
     """
-    Remove stale response files.
+    Remove stale response and temp files.
 
     Args:
         max_age_hours: Maximum age in hours before cleanup
@@ -417,20 +417,54 @@ def cleanup_old_responses(max_age_hours: int = 1, verbose: bool = False):
     max_age_seconds = max_age_hours * 3600
     cleaned = 0
 
-    for response_file in UNITY_DIR.glob("response-*.json"):
-        try:
-            file_age = current_time - response_file.stat().st_mtime
-            if file_age > max_age_seconds:
-                response_file.unlink()
-                cleaned += 1
+    for pattern in ("response-*.json", "*.tmp"):
+        for stale_file in UNITY_DIR.glob(pattern):
+            try:
+                file_age = current_time - stale_file.stat().st_mtime
+                if file_age > max_age_seconds:
+                    stale_file.unlink()
+                    cleaned += 1
+                    if verbose:
+                        print(f"Cleaned up: {stale_file.name}", file=sys.stderr)
+            except Exception as e:
                 if verbose:
-                    print(f"Cleaned up: {response_file.name}", file=sys.stderr)
-        except Exception as e:
-            if verbose:
-                print(f"Warning: Failed to cleanup {response_file.name}: {e}", file=sys.stderr)
+                    print(
+                        f"Warning: Failed to cleanup {stale_file.name}: {e}",
+                        file=sys.stderr,
+                    )
 
     if verbose and cleaned > 0:
-        print(f"Cleaned up {cleaned} old response file(s)", file=sys.stderr)
+        print(f"Cleaned up {cleaned} old file(s)", file=sys.stderr)
+
+
+def cleanup_stale_command_file(timeout: int, verbose: bool = False):
+    """
+    Remove stale command.json if older than timeout period.
+
+    This handles the case where a previous command was written but Unity
+    wasn't running to process it.
+
+    Args:
+        timeout: Command timeout in seconds (used as staleness threshold)
+        verbose: Print cleanup progress
+    """
+    command_file = UNITY_DIR / "command.json"
+    try:
+        if command_file.exists():
+            file_age = time.time() - command_file.stat().st_mtime
+            if file_age > timeout:
+                command_file.unlink()
+                if verbose:
+                    print(
+                        f"Cleaned up stale command file ({file_age:.0f}s old)",
+                        file=sys.stderr,
+                    )
+    except Exception as e:
+        if verbose:
+            print(
+                f"Warning: Failed to cleanup stale command file: {e}",
+                file=sys.stderr,
+            )
 
 
 def cleanup_response_file(command_id: str, verbose: bool = False):
@@ -455,7 +489,11 @@ def cleanup_response_file(command_id: str, verbose: bool = False):
 
 
 def execute_command(
-    action: str, params: Dict[str, Any], timeout: int, cleanup: bool = False, verbose: bool = False
+    action: str,
+    params: Dict[str, Any],
+    timeout: int,
+    cleanup: bool = False,
+    verbose: bool = False,
 ) -> str:
     """
     Execute Unity command and return formatted response.
@@ -464,7 +502,7 @@ def execute_command(
         action: Command action
         params: Command parameters
         timeout: Timeout in seconds
-        cleanup: Whether to cleanup old responses first
+        cleanup: Unused, kept for backwards compatibility
         verbose: Print progress messages
 
     Returns:
@@ -473,9 +511,9 @@ def execute_command(
     Raises:
         UnityCommandError: On execution errors
     """
-    # Cleanup old responses if requested
-    if cleanup:
-        cleanup_old_responses(verbose=verbose)
+    # Always cleanup old responses and stale command files
+    cleanup_old_responses(verbose=verbose)
+    cleanup_stale_command_file(timeout, verbose=verbose)
 
     # Write command
     if verbose:
@@ -487,15 +525,12 @@ def execute_command(
         print(f"Command ID: {command_id}", file=sys.stderr)
         print(f"Waiting for response (timeout: {timeout}s)...", file=sys.stderr)
 
-    response = wait_for_response(command_id, timeout, verbose)
-
-    # Format response
-    formatted = format_response(response, action)
-
-    # Cleanup response file
-    cleanup_response_file(command_id, verbose)
-
-    return formatted
+    try:
+        response = wait_for_response(command_id, timeout, verbose)
+        formatted = format_response(response, action)
+        return formatted
+    finally:
+        cleanup_response_file(command_id, verbose)
 
 
 def get_skill_source_dir() -> Optional[Path]:

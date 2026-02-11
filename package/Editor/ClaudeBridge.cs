@@ -43,6 +43,7 @@ namespace MXR.ClaudeBridge {
             };
 
             EnsureDirectoryExists();
+            CleanupOldResponses();
             EditorApplication.update += PollForCommands;
 
 #if DEBUG
