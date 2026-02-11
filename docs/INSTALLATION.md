@@ -7,11 +7,24 @@
 
 ## Quick Install
 
+### macOS / Linux / Git Bash
+
 ```bash
 curl -sSL https://raw.githubusercontent.com/ManageXR/claude-unity-bridge/main/install.sh | bash
 ```
 
-This installs the CLI and Claude Code skill in one command.
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/ManageXR/claude-unity-bridge/main/install.ps1 | iex
+```
+
+Both installers:
+- Install the `claude-unity-bridge` pip package
+- Add Python scripts directory to your PATH
+- Install the Claude Code skill
+
+**Windows Note:** On Windows without Developer Mode, the skill is installed as a directory copy instead of a symlink. This works seamlessly, but updates require re-running `unity-bridge install-skill`.
 
 ## Manual Install
 
@@ -79,7 +92,11 @@ unity-bridge uninstall-skill
 unity-bridge update
 ```
 
-The skill is installed as a symlink to `~/.claude/skills/unity-bridge/`, pointing to the bundled skill files in the pip package.
+The skill is installed to `~/.claude/skills/unity-bridge/`:
+- **macOS/Linux/Windows with Developer Mode:** Installed as a symlink pointing to the bundled skill files in the pip package (updates automatically with package)
+- **Windows without Developer Mode:** Installed as a directory copy (requires re-running `unity-bridge install-skill` after updates)
+
+To enable symlinks on Windows 10/11, enable Developer Mode in Settings > Update & Security > For developers.
 
 ### Unity Commands
 
@@ -125,9 +142,35 @@ pip install -e ".[dev]"
 unity-bridge install-skill
 ```
 
-## PATH Issues
+## Troubleshooting
+
+### PATH Issues
 
 If `unity-bridge` is not found after pip install, the pip scripts directory may not be in your PATH. You can:
 
 1. Add the pip scripts directory to your PATH
 2. Use the module directly: `python -m claude_unity_bridge.cli install-skill`
+
+### Windows Symlink Permissions
+
+On Windows, creating symlinks requires either:
+- Administrator privileges, or
+- Developer Mode enabled
+
+If you see `[WinError 1314] A required privilege is not held by the client`, the installer will automatically fall back to copying the skill directory. This works perfectly fine, but updates require re-running `unity-bridge install-skill`.
+
+**To enable symlinks (optional):**
+1. Open Settings > Update & Security > For developers
+2. Enable "Developer Mode"
+3. Restart your terminal
+4. Run `unity-bridge install-skill` again
+
+### Python Version
+
+Make sure you're using Python 3.8 or later:
+
+```bash
+python --version
+# or
+python3 --version
+```
