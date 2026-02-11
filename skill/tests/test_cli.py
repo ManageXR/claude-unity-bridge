@@ -638,6 +638,162 @@ class TestWaitForResponseEdgeCases:
             assert "Warning: Failed to parse response" in captured.err
 
 
+class TestWaitForRunningStatus:
+    """Test that wait_for_response polls through 'running' status"""
+
+    def test_polls_until_complete(self, tmp_path):
+        """wait_for_response should keep polling when status is 'running'"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            command_id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+            response_file = tmp_path / f"response-{command_id}.json"
+
+            # Write initial "running" response
+            running_response = {
+                "id": command_id,
+                "status": "running",
+                "action": "run-tests",
+                "progress": {"current": 0, "total": 10},
+            }
+            response_file.write_text(json.dumps(running_response))
+
+            # After a delay, update to "success"
+            def update_response():
+                time.sleep(0.5)
+                success_response = {
+                    "id": command_id,
+                    "status": "success",
+                    "action": "run-tests",
+                    "duration_ms": 1000,
+                    "result": {"passed": 10, "failed": 0, "skipped": 0, "failures": []},
+                }
+                response_file.write_text(json.dumps(success_response))
+
+            import threading
+
+            thread = threading.Thread(target=update_response)
+            thread.start()
+
+            result = wait_for_response(command_id, timeout=5)
+            thread.join()
+
+            assert result["status"] == "success"
+            assert result["result"]["passed"] == 10
+
+    def test_timeout_while_running(self, tmp_path):
+        """wait_for_response should timeout even if status stays 'running'"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            command_id = "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+            response_file = tmp_path / f"response-{command_id}.json"
+
+            # Write "running" response that never completes
+            running_response = {
+                "id": command_id,
+                "status": "running",
+                "action": "run-tests",
+                "progress": {"current": 0, "total": 10},
+            }
+            response_file.write_text(json.dumps(running_response))
+
+            with pytest.raises(CommandTimeoutError):
+                wait_for_response(command_id, timeout=1)
+
+    def test_verbose_progress_output(self, tmp_path, capsys):
+        """wait_for_response should print progress when verbose and status is 'running'"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            command_id = "c3d4e5f6-a7b8-9012-cdef-123456789012"
+            response_file = tmp_path / f"response-{command_id}.json"
+
+            # Write initial "running" response with progress
+            running_response = {
+                "id": command_id,
+                "status": "running",
+                "action": "run-tests",
+                "progress": {"current": 5, "total": 10, "currentTest": "TestFoo"},
+            }
+            response_file.write_text(json.dumps(running_response))
+
+            # After a delay, update to "success"
+            def update_response():
+                time.sleep(0.5)
+                success_response = {
+                    "id": command_id,
+                    "status": "success",
+                    "action": "run-tests",
+                    "duration_ms": 1000,
+                    "result": {"passed": 10, "failed": 0, "skipped": 0, "failures": []},
+                }
+                response_file.write_text(json.dumps(success_response))
+
+            import threading
+
+            thread = threading.Thread(target=update_response)
+            thread.start()
+
+            result = wait_for_response(command_id, timeout=5, verbose=True)
+            thread.join()
+
+            assert result["status"] == "success"
+            captured = capsys.readouterr()
+            assert "Tests in progress: 5/10 TestFoo" in captured.err
+
+    def test_verbose_no_progress_info(self, tmp_path, capsys):
+        """Verbose output should say 'Command running...' when no progress info"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            command_id = "d4e5f6a7-b8c9-0123-defa-234567890123"
+            response_file = tmp_path / f"response-{command_id}.json"
+
+            # Write "running" response without progress total
+            running_response = {
+                "id": command_id,
+                "status": "running",
+                "action": "compile",
+            }
+            response_file.write_text(json.dumps(running_response))
+
+            # After a delay, update to "success"
+            def update_response():
+                time.sleep(0.5)
+                success_response = {
+                    "id": command_id,
+                    "status": "success",
+                    "action": "compile",
+                    "duration_ms": 500,
+                }
+                response_file.write_text(json.dumps(success_response))
+
+            import threading
+
+            thread = threading.Thread(target=update_response)
+            thread.start()
+
+            result = wait_for_response(command_id, timeout=5, verbose=True)
+            thread.join()
+
+            assert result["status"] == "success"
+            captured = capsys.readouterr()
+            assert "Command running..." in captured.err
+
+    def test_returns_failure_not_running(self, tmp_path):
+        """wait_for_response should return immediately for non-running statuses"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            command_id = "e5f6a7b8-c9d0-1234-efab-345678901234"
+            response_file = tmp_path / f"response-{command_id}.json"
+
+            # Write a "failure" response (should return immediately)
+            failure_response = {
+                "id": command_id,
+                "status": "failure",
+                "action": "run-tests",
+                "duration_ms": 1000,
+                "result": {"passed": 8, "failed": 2, "skipped": 0, "failures": []},
+            }
+            response_file.write_text(json.dumps(failure_response))
+
+            result = wait_for_response(command_id, timeout=5)
+            assert result["status"] == "failure"
+            assert result["result"]["failed"] == 2
+
+
 class TestExecuteCommand:
     """Test execute_command function"""
 
