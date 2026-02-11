@@ -9,10 +9,10 @@ This document describes how to test the Unity Bridge Python script.
 pip install -r requirements-dev.txt
 
 # Run all tests
-pytest tests/test_unity_command.py -v
+pytest tests/test_cli.py -v
 
 # Run with coverage
-pytest tests/test_unity_command.py -v --cov=scripts --cov-report=html
+pytest tests/test_cli.py -v --cov=scripts --cov-report=html
 ```
 
 ## Test Structure
@@ -31,25 +31,25 @@ The test suite uses pytest and covers:
 
 ```bash
 cd skill
-pytest tests/test_unity_command.py -v
+pytest tests/test_cli.py -v
 ```
 
 ### Specific Test Class
 
 ```bash
-pytest tests/test_unity_command.py::TestFormatTestResults -v
+pytest tests/test_cli.py::TestFormatTestResults -v
 ```
 
 ### Specific Test
 
 ```bash
-pytest tests/test_unity_command.py::TestFormatTestResults::test_all_tests_passed -v
+pytest tests/test_cli.py::TestFormatTestResults::test_all_tests_passed -v
 ```
 
 ### With Coverage
 
 ```bash
-pytest tests/test_unity_command.py --cov=scripts --cov-report=term-missing
+pytest tests/test_cli.py --cov=scripts --cov-report=term-missing
 ```
 
 This shows which lines are not covered by tests.
@@ -57,7 +57,7 @@ This shows which lines are not covered by tests.
 ### Generate HTML Coverage Report
 
 ```bash
-pytest tests/test_unity_command.py --cov=scripts --cov-report=html
+pytest tests/test_cli.py --cov=scripts --cov-report=html
 open htmlcov/index.html
 ```
 
@@ -96,34 +96,34 @@ Open Unity Editor with a project that has the Claude Unity Bridge package instal
 cd skill
 
 # Check editor status
-python3 scripts/unity_command.py get-status
+python3 scripts/cli.py get-status
 
 # Trigger compilation
-python3 scripts/unity_command.py compile
+python3 scripts/cli.py compile
 
 # Run tests
-python3 scripts/unity_command.py run-tests --mode EditMode
+python3 scripts/cli.py run-tests --mode EditMode
 
 # Get console logs
-python3 scripts/unity_command.py get-console-logs --limit 10 --filter Error
+python3 scripts/cli.py get-console-logs --limit 10 --filter Error
 
 # Refresh assets
-python3 scripts/unity_command.py refresh
+python3 scripts/cli.py refresh
 ```
 
 ### 3. Test Error Scenarios
 
 ```bash
 # Close Unity to test "Unity not running" error
-python3 scripts/unity_command.py get-status
+python3 scripts/cli.py get-status
 # Should error: "Unity Editor not detected"
 
 # Test timeout
-python3 scripts/unity_command.py get-status --timeout 2
+python3 scripts/cli.py get-status --timeout 2
 # If Unity is slow to respond, will timeout
 
 # Test verbose mode
-python3 scripts/unity_command.py compile --verbose
+python3 scripts/cli.py compile --verbose
 # Shows detailed execution progress
 ```
 
@@ -141,7 +141,7 @@ See `.github/workflows/test-skill.yml` for the CI configuration.
 
 When adding new functionality to the Python script:
 
-1. Add test cases to `tests/test_unity_command.py`
+1. Add test cases to `tests/test_cli.py`
 2. Follow the existing test structure
 3. Use descriptive test names
 4. Test both success and failure cases
@@ -172,7 +172,7 @@ If you see `ModuleNotFoundError: No module named 'unity_command'`:
 cd skill
 
 # Run tests from there
-pytest tests/test_unity_command.py
+pytest tests/test_cli.py
 ```
 
 ### Path Issues
@@ -199,7 +199,7 @@ def test_something(tmp_path):
 
 ## Test Coverage Goals
 
-Current coverage: ~95% of `unity_command.py`
+Current coverage: ~95% of `cli.py`
 
 Not covered (intentionally):
 - `main()` function (CLI entry point, tested manually)
@@ -232,7 +232,7 @@ def test_polling_performance(tmp_path):
 ### Verbose Output
 
 ```bash
-pytest tests/test_unity_command.py -v -s
+pytest tests/test_cli.py -v -s
 ```
 
 The `-s` flag shows print statements.
@@ -240,7 +240,7 @@ The `-s` flag shows print statements.
 ### Debug Specific Test
 
 ```bash
-pytest tests/test_unity_command.py::TestWriteCommand::test_write_command_creates_file -v -s
+pytest tests/test_cli.py::TestWriteCommand::test_write_command_creates_file -v -s
 ```
 
 ### Use pdb Debugger
@@ -257,7 +257,7 @@ def test_something():
 Run:
 
 ```bash
-pytest tests/test_unity_command.py::test_something -s
+pytest tests/test_cli.py::test_something -s
 ```
 
 ## Resources

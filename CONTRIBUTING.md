@@ -50,7 +50,7 @@ Please confirm tests pass before submitting PRs that modify `Editor/` or `Tests/
 - Follow existing patterns and conventions in the codebase
 - Keep changes focused and minimal
 - No major refactors without prior discussion in an issue
-- Maintain the deterministic behavior of `unity_command.py`
+- Maintain the deterministic behavior of `cli.py`
 
 ## PR Process
 

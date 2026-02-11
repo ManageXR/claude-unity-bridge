@@ -23,31 +23,31 @@ All bridge commands tested and working:
 1. **get-status** ✓
    ```bash
    cd .TestProject
-   python3 ../skill/scripts/unity_command.py get-status
+   python3 ../skill/scripts/cli.py get-status
    ```
    Output: Compilation Ready, Play Mode: Editing
 
 2. **compile** ✓
    ```bash
-   python3 ../skill/scripts/unity_command.py compile
+   python3 ../skill/scripts/cli.py compile
    ```
    Output: Compilation Status: running
 
 3. **refresh** ✓
    ```bash
-   python3 ../skill/scripts/unity_command.py refresh
+   python3 ../skill/scripts/cli.py refresh
    ```
    Output: Asset Database Refreshed (0.04s)
 
 4. **get-console-logs** ✓
    ```bash
-   python3 ../skill/scripts/unity_command.py get-console-logs --limit 5
+   python3 ../skill/scripts/cli.py get-console-logs --limit 5
    ```
    Output: Successfully retrieved last 5 console logs with full stack traces
 
 5. **run-tests** ✓
    ```bash
-   python3 ../skill/scripts/unity_command.py run-tests --mode EditMode
+   python3 ../skill/scripts/cli.py run-tests --mode EditMode
    ```
    Output: 0 tests (expected - package has no Unity tests yet, see AGENTS.md)
 
@@ -65,7 +65,7 @@ All bridge commands tested and working:
 ### ❌ Wrong (times out):
 ```bash
 cd /path/to/claude-unity-bridge
-python3 skill/scripts/unity_command.py get-status
+python3 skill/scripts/cli.py get-status
 ```
 
 This writes to `/path/to/claude-unity-bridge/.unity-bridge/` but Unity looks at project's `.unity-bridge/`.
@@ -73,7 +73,7 @@ This writes to `/path/to/claude-unity-bridge/.unity-bridge/` but Unity looks at 
 ### ✅ Correct:
 ```bash
 cd /path/to/claude-unity-bridge/.TestProject
-python3 ../skill/scripts/unity_command.py get-status
+python3 ../skill/scripts/cli.py get-status
 ```
 
 This writes to `.TestProject/.unity-bridge/` where Unity is polling.
@@ -104,19 +104,19 @@ Edit files in `Editor/`, `Editor/Commands/`, etc. Changes reflect immediately du
 cd .TestProject
 
 # Check Unity status
-python3 ../skill/scripts/unity_command.py get-status
+python3 ../skill/scripts/cli.py get-status
 
 # Trigger compilation
-python3 ../skill/scripts/unity_command.py compile
+python3 ../skill/scripts/cli.py compile
 
 # Refresh assets
-python3 ../skill/scripts/unity_command.py refresh
+python3 ../skill/scripts/cli.py refresh
 
 # Get console logs
-python3 ../skill/scripts/unity_command.py get-console-logs --limit 10
+python3 ../skill/scripts/cli.py get-console-logs --limit 10
 
 # Run tests (when Unity tests exist)
-python3 ../skill/scripts/unity_command.py run-tests --mode EditMode
+python3 ../skill/scripts/cli.py run-tests --mode EditMode
 ```
 
 ### 4. Run Python Tests
@@ -125,7 +125,7 @@ Test the skill script itself:
 
 ```bash
 cd skill
-pytest tests/test_unity_command.py -v
+pytest tests/test_cli.py -v
 ```
 
 ### 5. Check Unity Console
@@ -189,7 +189,7 @@ All commands processed successfully with proper callbacks.
 - [x] Unity Package Manager shows "Claude Unity Bridge" as "Local" package
 - [x] Unity Console shows `[ClaudeBridge]` initialization and processing messages
 - [x] `.unity-bridge/` directory created by Unity on startup
-- [x] `python3 ../skill/scripts/unity_command.py get-status` returns success (exit code 0)
+- [x] `python3 ../skill/scripts/cli.py get-status` returns success (exit code 0)
 - [x] Response shows correct Unity version and project state
 - [x] All bridge commands work (compile, refresh, get-console-logs, run-tests)
 - [x] Command/response files created and cleaned up properly
@@ -219,7 +219,7 @@ The integration test harness is **ready for use**. When working on Unity Bridge:
 
 1. Open `.TestProject` in Unity
 2. Make changes to package code
-3. Test with `cd .TestProject && python3 ../skill/scripts/unity_command.py <command>`
+3. Test with `cd .TestProject && python3 ../skill/scripts/cli.py <command>`
 4. Check Unity Console for results
 5. Run pytest for Python script tests
 

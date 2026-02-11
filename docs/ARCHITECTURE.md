@@ -21,7 +21,7 @@ package/                     # Unity package (UPM)
 
 skill/                       # Claude Code skill (Python)
 ├── scripts/
-│   └── unity_command.py     # Deterministic command script
+│   └── cli.py               # Deterministic command script
 ├── references/
 │   ├── COMMANDS.md          # Complete command specification
 │   └── EXTENDING.md         # Guide for adding custom commands

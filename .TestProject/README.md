@@ -72,7 +72,7 @@ With Unity Editor open and the .TestProject loaded, test the Python skill script
 ```bash
 # From repository root
 cd skill
-python3 scripts/unity_command.py get-status
+python3 scripts/cli.py get-status
 ```
 
 **Expected output:**
@@ -91,16 +91,16 @@ Try other commands to validate full functionality:
 
 ```bash
 # Compile scripts
-python3 scripts/unity_command.py compile
+python3 scripts/cli.py compile
 
 # Refresh asset database
-python3 scripts/unity_command.py refresh
+python3 scripts/cli.py refresh
 
 # Get console logs
-python3 scripts/unity_command.py get-console-logs --limit 10
+python3 scripts/cli.py get-console-logs --limit 10
 
 # Run tests (if any test assemblies exist)
-python3 scripts/unity_command.py run-tests --mode EditMode
+python3 scripts/cli.py run-tests --mode EditMode
 ```
 
 ## Troubleshooting
@@ -156,11 +156,11 @@ open -a "Unity" .TestProject/
 
 # 3. Test changes via Python skill script
 cd skill
-python3 scripts/unity_command.py get-status
-python3 scripts/unity_command.py compile
+python3 scripts/cli.py get-status
+python3 scripts/cli.py compile
 
 # 4. Run pytest tests for Python script
-pytest tests/test_unity_command.py -v
+pytest tests/test_cli.py -v
 
 # 5. Commit when all tests pass
 ```
@@ -217,10 +217,10 @@ To use a different Unity version:
 open -a "Unity" .TestProject/
 
 # Test bridge
-cd skill && python3 scripts/unity_command.py get-status
+cd skill && python3 scripts/cli.py get-status
 
 # Run all commands
-python3 scripts/unity_command.py --help
+python3 scripts/cli.py --help
 
 # Close Unity
 # Use Cmd+Q or Unity > Quit
