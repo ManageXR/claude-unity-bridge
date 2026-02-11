@@ -173,6 +173,23 @@ def wait_for_response(command_id: str, timeout: int, verbose: bool = False) -> D
                 response_id = result.get("id", "")
                 if response_id != command_id:
                     raise UnityCommandError(f"Response ID mismatch: expected {command_id}")
+                # Continue polling if command is still running (Unity writes progress updates)
+                if result.get("status") == "running":
+                    if verbose:
+                        progress = result.get("progress", {})
+                        current = progress.get("current", 0)
+                        total = progress.get("total", 0)
+                        current_test = progress.get("currentTest", "")
+                        if total > 0:
+                            print(
+                                f"Tests in progress: {current}/{total} {current_test}",
+                                file=sys.stderr,
+                            )
+                        else:
+                            print("Command running...", file=sys.stderr)
+                    time.sleep(sleep_time)
+                    sleep_time = min(sleep_time * SLEEP_MULTIPLIER, MAX_SLEEP)
+                    continue
                 return result
             except json.JSONDecodeError:
                 # Might have caught it mid-write, retry once
@@ -185,6 +202,11 @@ def wait_for_response(command_id: str, timeout: int, verbose: bool = False) -> D
                     response_id = result.get("id", "")
                     if response_id != command_id:
                         raise UnityCommandError(f"Response ID mismatch: expected {command_id}")
+                    # Continue polling if command is still running
+                    if result.get("status") == "running":
+                        time.sleep(sleep_time)
+                        sleep_time = min(sleep_time * SLEEP_MULTIPLIER, MAX_SLEEP)
+                        continue
                     return result
                 except json.JSONDecodeError as e:
                     # Log raw response for debugging
