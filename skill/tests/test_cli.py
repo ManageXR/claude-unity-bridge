@@ -24,6 +24,7 @@ from claude_unity_bridge.cli import (
     wait_for_response,
     cleanup_old_responses,
     cleanup_response_file,
+    cleanup_stale_command_file,
     execute_command,
     execute_health_check,
     check_gitignore_and_notify,
@@ -679,7 +680,8 @@ class TestExecuteCommand:
                 result = execute_command("get-status", {}, timeout=5)
                 assert "Unity Editor Status" in result
 
-    def test_execute_command_with_cleanup(self, tmp_path):
+    def test_execute_command_always_cleans_up(self, tmp_path):
+        """execute_command always runs cleanup, even without cleanup flag"""
         with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             # Create an old response file
             tmp_path.mkdir(parents=True, exist_ok=True)
@@ -709,9 +711,10 @@ class TestExecuteCommand:
                 return command_id
 
             with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write):
-                result = execute_command("compile", {}, timeout=5, cleanup=True)
+                # Note: cleanup flag NOT passed — cleanup should still run
+                result = execute_command("compile", {}, timeout=5)
                 assert "Compilation Successful" in result
-                # Old file should be cleaned up
+                # Old file should be cleaned up even without cleanup=True
                 assert not old_file.exists()
 
     def test_execute_command_verbose(self, tmp_path, capsys):
@@ -1557,6 +1560,178 @@ class TestDirectoryPermissions:
         mode = os.stat(command_file).st_mode
         file_perms = stat.S_IMODE(mode)
         assert file_perms == 0o600, f"Expected 0o600, got {oct(file_perms)}"
+
+
+class TestCleanupStaleCommandFile:
+    """Test cleanup_stale_command_file function"""
+
+    def test_removes_stale_command_file(self, tmp_path):
+        """Stale command.json older than timeout is removed"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            import os
+
+            command_file = tmp_path / "command.json"
+            command_file.write_text('{"id": "stale", "action": "compile"}')
+
+            # Make it old (older than 30s timeout)
+            old_time = time.time() - 60
+            os.utime(command_file, (old_time, old_time))
+
+            cleanup_stale_command_file(timeout=30)
+            assert not command_file.exists()
+
+    def test_keeps_fresh_command_file(self, tmp_path):
+        """Recent command.json within timeout is kept"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            command_file = tmp_path / "command.json"
+            command_file.write_text('{"id": "fresh", "action": "compile"}')
+
+            cleanup_stale_command_file(timeout=30)
+            assert command_file.exists()
+
+    def test_no_command_file(self, tmp_path):
+        """No error when command.json doesn't exist"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            cleanup_stale_command_file(timeout=30)  # Should not raise
+
+    def test_verbose_output(self, tmp_path, capsys):
+        """Verbose mode logs stale command file cleanup"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            import os
+
+            command_file = tmp_path / "command.json"
+            command_file.write_text('{"id": "stale"}')
+            old_time = time.time() - 60
+            os.utime(command_file, (old_time, old_time))
+
+            cleanup_stale_command_file(timeout=30, verbose=True)
+
+            captured = capsys.readouterr()
+            assert "stale command file" in captured.err
+
+
+class TestCleanupOldResponsesWithTmpFiles:
+    """Test that cleanup_old_responses also cleans .tmp files"""
+
+    def test_cleanup_old_tmp_files(self, tmp_path):
+        """Old .tmp files are cleaned up alongside response files"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            import os
+
+            # Create old tmp file
+            old_tmp = tmp_path / "command.json.tmp"
+            old_tmp.write_text("temp data")
+            old_time = time.time() - 7200  # 2 hours ago
+            os.utime(old_tmp, (old_time, old_time))
+
+            # Create recent tmp file
+            recent_tmp = tmp_path / "response-abc.json.tmp"
+            recent_tmp.write_text("recent temp")
+
+            cleanup_old_responses(max_age_hours=1)
+
+            assert not old_tmp.exists()
+            assert recent_tmp.exists()
+
+    def test_cleanup_both_response_and_tmp(self, tmp_path):
+        """Both old response files and old tmp files are cleaned"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            import os
+
+            old_time = time.time() - 7200
+
+            old_response = tmp_path / "response-old.json"
+            old_response.write_text('{"id": "old"}')
+            os.utime(old_response, (old_time, old_time))
+
+            old_tmp = tmp_path / "something.tmp"
+            old_tmp.write_text("old temp")
+            os.utime(old_tmp, (old_time, old_time))
+
+            cleanup_old_responses(max_age_hours=1)
+
+            assert not old_response.exists()
+            assert not old_tmp.exists()
+
+
+class TestResponseCleanupOnError:
+    """Test that response files are cleaned up even on timeout/error"""
+
+    def test_response_file_cleaned_on_timeout(self, tmp_path):
+        """Response file is cleaned up when CommandTimeoutError is raised"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            import uuid
+
+            command_id = str(uuid.uuid4())
+
+            def mock_write(action, params):
+                # Create a response file that might exist from a partial operation
+                response_file = tmp_path / f"response-{command_id}.json"
+                response_file.write_text('{"partial": true}')
+                return command_id
+
+            with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write):
+                with patch(
+                    "claude_unity_bridge.cli.wait_for_response",
+                    side_effect=CommandTimeoutError("Timed out"),
+                ):
+                    with pytest.raises(CommandTimeoutError):
+                        execute_command("compile", {}, timeout=5)
+
+                    # Response file should be cleaned up despite the error
+                    response_file = tmp_path / f"response-{command_id}.json"
+                    assert not response_file.exists()
+
+    def test_response_file_cleaned_on_format_error(self, tmp_path):
+        """Response file is cleaned up when format_response raises"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            import uuid
+
+            command_id = str(uuid.uuid4())
+            response_data = {
+                "id": command_id,
+                "status": "success",
+                "action": "compile",
+                "duration_ms": 100,
+            }
+
+            def mock_write(action, params):
+                response_file = tmp_path / f"response-{command_id}.json"
+                response_file.write_text(json.dumps(response_data))
+                return command_id
+
+            with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write):
+                with patch(
+                    "claude_unity_bridge.cli.format_response",
+                    side_effect=RuntimeError("Format error"),
+                ):
+                    with pytest.raises(RuntimeError, match="Format error"):
+                        execute_command("compile", {}, timeout=5)
+
+                    # Response file should be cleaned up despite the error
+                    response_file = tmp_path / f"response-{command_id}.json"
+                    assert not response_file.exists()
+
+    def test_cleanup_handles_missing_response_file_on_timeout(self, tmp_path):
+        """No error when response file doesn't exist during timeout cleanup"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            import uuid
+
+            command_id = str(uuid.uuid4())
+
+            def mock_write(action, params):
+                # Don't create response file — simulates Unity never responding
+                return command_id
+
+            with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write):
+                with patch(
+                    "claude_unity_bridge.cli.wait_for_response",
+                    side_effect=CommandTimeoutError("Timed out"),
+                ):
+                    with pytest.raises(CommandTimeoutError):
+                        execute_command("compile", {}, timeout=5)
+
+                    # Should not raise — cleanup_response_file handles missing files
 
 
 if __name__ == "__main__":
