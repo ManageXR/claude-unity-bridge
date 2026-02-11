@@ -26,5 +26,5 @@ comment:
 flags:
   python-skill:
     paths:
-      - skill/scripts/
+      - skill/src/
     carryforward: true

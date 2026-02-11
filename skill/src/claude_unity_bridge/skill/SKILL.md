@@ -1,6 +1,6 @@
 ---
 name: unity
-description: Execute Unity Editor commands (run tests, compile, get logs, refresh assets) via file-based bridge. Auto-activates for Unity-related tasks. Requires com.managexr.claude-bridge package installed in Unity project.
+description: Execute Unity Editor commands (run tests, compile, get logs, refresh assets) via file-based bridge. Auto-activates for Unity-related tasks. Requires com.mxr.claude-bridge package installed in Unity project.
 ---
 
 # Unity Bridge Skill
@@ -22,7 +22,7 @@ The Unity Bridge enables Claude Code to trigger operations in a running Unity Ed
 
 ## Requirements
 
-1. **Unity Package:** Install `com.managexr.claude-bridge` in your Unity project
+1. **Unity Package:** Install `com.mxr.claude-bridge` in your Unity project
    - Via Package Manager: `https://github.com/ManageXR/claude-unity-bridge.git`
    - See main package README for installation instructions
 

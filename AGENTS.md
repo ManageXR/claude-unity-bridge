@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is a Unity package (`com.managexr.claude-bridge`) that enables Claude Code to control Unity Editor operations via a file-based protocol. The package has two components:
+This is a Unity package (`com.mxr.claude-bridge`) that enables Claude Code to control Unity Editor operations via a file-based protocol. The package has two components:
 
 1. **Unity Package** - C# code that runs in Unity Editor, polls for commands, executes them
 2. **Claude Code Skill** - Python script + documentation that Claude uses to send commands
@@ -11,7 +11,7 @@ This is a Unity package (`com.managexr.claude-bridge`) that enables Claude Code 
 
 ## Project Structure
 
-### Unity Package (Root)
+### Unity Package (package/)
 - `Editor/` - C# command implementations for Unity
   - `ClaudeBridge.cs` - Main coordinator, command dispatcher
   - `Commands/` - Individual command implementations (ICommand interface)
@@ -20,7 +20,7 @@ This is a Unity package (`com.managexr.claude-bridge`) that enables Claude Code 
 - `README.md` - Package documentation and protocol specification
 
 ### Claude Code Skill (skill/)
-- `scripts/unity_command.py` - **THE CORE** - Handles all command execution
+- `scripts/cli.py` - **THE CORE** - Handles all command execution
 - `SKILL.md` - Main documentation with YAML frontmatter
 - `references/` - Extended documentation
   - `COMMANDS.md` - Complete command reference
@@ -53,25 +53,25 @@ pre-commit run --all-files
 
 ### Testing the Python Script
 ```bash
-# Run pytest suite (22 tests)
+# Run pytest suite
 cd skill
-pytest tests/test_unity_command.py -v
+pytest tests/test_cli.py -v
 
 # Run with coverage
-pytest tests/test_unity_command.py --cov=scripts --cov-report=term-missing
+pytest tests/test_cli.py --cov=scripts --cov-report=term-missing
 
 # Test script help
-python3 scripts/unity_command.py --help
+python3 scripts/cli.py --help
 ```
 
 ### Testing with Unity
 ```bash
 # These require Unity Editor to be running
-python3 skill/scripts/unity_command.py get-status
-python3 skill/scripts/unity_command.py compile
-python3 skill/scripts/unity_command.py run-tests --mode EditMode
-python3 skill/scripts/unity_command.py get-console-logs --limit 10 --filter Error
-python3 skill/scripts/unity_command.py refresh
+python3 skill/scripts/cli.py get-status
+python3 skill/scripts/cli.py compile
+python3 skill/scripts/cli.py run-tests --mode EditMode
+python3 skill/scripts/cli.py get-console-logs --limit 10 --filter Error
+python3 skill/scripts/cli.py refresh
 ```
 
 ### Git Workflow
@@ -92,7 +92,7 @@ git commit -m "test: Add tests and CI"
 
 ## Coding Style
 
-### Python (skill/scripts/unity_command.py)
+### Python (skill/scripts/cli.py)
 - PEP 8 compliant
 - 100-character line limit
 - Type hints where helpful
@@ -119,8 +119,8 @@ git commit -m "test: Add tests and CI"
 
 ### Python Script Tests (Critical)
 - **Framework**: pytest
-- **Coverage Goal**: ~95% of unity_command.py
-- **Location**: `skill/tests/test_unity_command.py`
+- **Coverage Goal**: ~95% of cli.py
+- **Location**: `skill/tests/test_cli.py`
 - **Run Before Commit**: Always run pytest before committing script changes
 - **CI**: GitHub Actions runs on Python 3.8-3.11, Ubuntu/macOS/Windows
 
@@ -146,10 +146,10 @@ git commit -m "test: Add tests and CI"
   - ⏳ Phase 6: CI/CD integration (deferred - licensing discussion needed)
 
 ### Test-Driven Development
-When modifying `unity_command.py`:
+When modifying `cli.py`:
 1. Write/update pytest tests first
 2. Implement changes
-3. Run `pytest tests/test_unity_command.py -v`
+3. Run `pytest tests/test_cli.py -v`
 4. Check coverage: `pytest --cov=scripts`
 5. All tests must pass before committing
 
@@ -157,10 +157,10 @@ When modifying `unity_command.py`:
 
 ### NEVER Do These Things
 
-1. **NEVER modify unity_command.py without updating tests**
+1. **NEVER modify cli.py without updating tests**
    - The script is the foundation of reliability
    - Untested changes break the deterministic guarantee
-   - Always update `skill/tests/test_unity_command.py`
+   - Always update `skill/tests/test_cli.py`
 
 2. **NEVER modify Unity commands without updating Unity tests**
    - Command implementations must maintain test coverage
@@ -180,7 +180,7 @@ When modifying `unity_command.py`:
 
 5. **NEVER change response format without updating formatters**
    - Unity-side response format is in `Models/CommandResponse.cs`
-   - Python formatters are in `unity_command.py` (format_* functions)
+   - Python formatters are in `cli.py` (format_* functions)
    - These must stay in sync
 
 6. **NEVER remove error handling from commands**
@@ -192,7 +192,7 @@ When modifying `unity_command.py`:
 
 1. **ALWAYS run pytest before committing Python changes**
    ```bash
-   cd skill && pytest tests/test_unity_command.py -v
+   cd skill && pytest tests/test_cli.py -v
    ```
 
 2. **ALWAYS run Unity tests before committing C# changes**
@@ -269,10 +269,10 @@ When modifying `unity_command.py`:
 
 3. **Test with Python script**:
    ```bash
-   python3 skill/scripts/unity_command.py your-command
+   python3 skill/scripts/cli.py your-command
    ```
 
-4. **Optional: Add Python Formatter** in `unity_command.py`:
+4. **Optional: Add Python Formatter** in `cli.py`:
    ```python
    def format_your_command(response: Dict, status: str, duration: float) -> str:
        # Custom formatting logic
@@ -337,16 +337,16 @@ test: Add pytest tests for scene validation
 
 2. **Add Python formatter (optional)**
    ```bash
-   # Edit skill/scripts/unity_command.py
+   # Edit skill/scripts/cli.py
    # Add format_your_command() function
    # Update format_response() dispatch
    ```
 
 3. **Write tests**
    ```bash
-   # Edit skill/tests/test_unity_command.py
+   # Edit skill/tests/test_cli.py
    # Add TestFormatYourCommand class
-   cd skill && pytest tests/test_unity_command.py -v
+   cd skill && pytest tests/test_cli.py -v
    ```
 
 4. **Update documentation**
@@ -372,7 +372,7 @@ test: Add pytest tests for scene validation
 
 1. **Check Unity is running**
    ```bash
-   python3 skill/scripts/unity_command.py get-status --verbose
+   python3 skill/scripts/cli.py get-status --verbose
    ```
 
 2. **Inspect command/response files**
@@ -389,7 +389,7 @@ test: Add pytest tests for scene validation
 
 4. **Test with timeout and verbose**
    ```bash
-   python3 skill/scripts/unity_command.py compile --timeout 60 --verbose
+   python3 skill/scripts/cli.py compile --timeout 60 --verbose
    ```
 
 ## Architecture Patterns
@@ -473,7 +473,7 @@ test: Add pytest tests for scene validation
 
 ### Tests Failing After Script Changes
 **Cause**: Tests out of sync with implementation
-**Fix**: Update `skill/tests/test_unity_command.py` to match new behavior
+**Fix**: Update `skill/tests/test_cli.py` to match new behavior
 
 ## Contributing Guidelines
 
@@ -552,23 +552,23 @@ The Unity package now has comprehensive test coverage:
 ### Most Common Commands
 ```bash
 # Get Unity status
-python3 skill/scripts/unity_command.py get-status
+python3 skill/scripts/cli.py get-status
 
 # Run EditMode tests
-python3 skill/scripts/unity_command.py run-tests --mode EditMode
+python3 skill/scripts/cli.py run-tests --mode EditMode
 
 # Check for errors
-python3 skill/scripts/unity_command.py get-console-logs --filter Error
+python3 skill/scripts/cli.py get-console-logs --filter Error
 
 # Test Python script
-cd skill && pytest tests/test_unity_command.py -v
+cd skill && pytest tests/test_cli.py -v
 ```
 
 ### Key Files to Know
-- `skill/scripts/unity_command.py` - THE deterministic command executor
+- `skill/scripts/cli.py` - THE deterministic command executor
 - `Editor/ClaudeBridge.cs` - Unity command dispatcher
 - `Editor/Models/CommandResponse.cs` - Response structure
-- `skill/tests/test_unity_command.py` - Python test suite
+- `skill/tests/test_cli.py` - Python test suite
 - `skill/SKILL.md` - User-facing documentation
 
 ### Exit Codes

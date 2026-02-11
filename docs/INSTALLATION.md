@@ -59,7 +59,7 @@ Add this line to your project's `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.managexr.claude-bridge": "https://github.com/ManageXR/claude-unity-bridge.git?path=package"
+    "com.mxr.claude-bridge": "https://github.com/ManageXR/claude-unity-bridge.git?path=package"
   }
 }
 ```
