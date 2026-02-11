@@ -1,7 +1,7 @@
 {
   "name": "com.mxr.claude-bridge",
-  "version": "0.1.5",
-  "displayName": "Claude Unity Bridge",
+  "version": "0.2.0",
+  "displayName": "ManageXR Claude Unity Bridge",
   "description": "File-based bridge enabling Claude Code to trigger Unity Editor operations (tests, compile, refresh) in a running editor instance.",
   "unity": "2021.3",
   "documentationUrl": "https://github.com/ManageXR/claude-unity-bridge",
@@ -13,6 +13,8 @@
     "automation"
   ],
   "author": {
-    "name": "ManageXR"
+      "name": "Mighty Immersion, Inc",
+      "email": "support@managexr.com",
+      "url": "https://www.managexr.com"
   }
 }

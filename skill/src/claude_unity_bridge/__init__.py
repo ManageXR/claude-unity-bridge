@@ -1,3 +1,3 @@
 """Claude Unity Bridge - Control Unity Editor from Claude Code."""
 
-__version__ = "0.1.5"
+__version__ = "0.2.0"
