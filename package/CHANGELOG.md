@@ -5,6 +5,21 @@ All notable changes to the Claude Unity Bridge package will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2026-02-10
+
+### Fixed
+
+- Allow read-only commands (`get-status`, `get-console-logs`) while Unity is compiling or updating — mutating commands return an explicit error instead of timing out
+- Always clean up stale response, temp, and command files at the start of every command (no longer gated behind `--cleanup` flag)
+- Clean up response files on timeout and error via try/finally, not just on success
+- Include `.tmp` files in TTL sweep alongside `response-*.json`
+- Remove orphaned `command.json` files older than timeout before writing new commands
+- Clean up stale files on Unity Editor startup
+
+### Added
+
+- Contributor Covenant Code of Conduct
+
 ## [0.1.4] - 2026-02-09
 
 ### Security
@@ -91,6 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Editor-only package (no runtime impact)
 - Automatic initialization via `[InitializeOnLoad]`
 
+[0.1.5]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.5
 [0.1.4]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.4
 [0.1.3]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.3
 [0.1.2]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.2
