@@ -5,6 +5,39 @@ All notable changes to the Claude Unity Bridge package will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-02-11
+
+### Fixed
+
+- Windows symlink permission error (`[WinError 1314]`) during skill installation (#13)
+  - Implement symlink-with-copy-fallback strategy
+  - Gracefully fall back to `shutil.copytree()` when symlink creation fails
+  - Installation now succeeds on Windows without Administrator privileges or Developer Mode
+- Handle both symlinks and copied directories in `uninstall-skill` command
+- Unicode encoding error on Windows console (replaced checkmarks with `[OK]`)
+- CLI returning prematurely when Unity writes progress updates (#32)
+  - Now polls through "running" status with exponential backoff instead of returning early
+  - Fixes issue where test results showed 0/0/0 while tests were still executing
+  - Added progress info display in verbose mode
+
+### Added
+
+- `install.ps1` PowerShell installer for native Windows support
+- Platform-aware error messaging (uses `rmdir /s` on Windows, `rm -rf` on Unix)
+- User notification about copy fallback with Developer Mode instructions
+- Comprehensive test coverage for copy fallback scenarios:
+  - `test_install_skill_copy_fallback_on_symlink_failure`
+  - `test_install_skill_copy_fallback_failure`
+  - `test_uninstall_skill_removes_copied_directory`
+  - `test_uninstall_skill_warns_on_non_skill_directory`
+- Updated existing tests to handle both symlinks and copied directories on Windows
+- Windows-specific troubleshooting section in installation documentation
+
+### Changed
+
+- `install_skill()` now removes existing installations (files, directories, or symlinks) before installing
+- `uninstall_skill()` validates directory contains `SKILL.md` before removal
+
 ## [0.1.5] - 2026-02-10
 
 ### Fixed
@@ -106,6 +139,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Editor-only package (no runtime impact)
 - Automatic initialization via `[InitializeOnLoad]`
 
+[0.2.0]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.2.0
 [0.1.5]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.5
 [0.1.4]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.4
 [0.1.3]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.3
