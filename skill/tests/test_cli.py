@@ -237,7 +237,10 @@ class TestFormatResponse:
     """Test main format_response function"""
 
     def test_format_error_status(self):
-        response = {"status": "error", "error": "Cannot compile while Unity is updating"}
+        response = {
+            "status": "error",
+            "error": "Cannot compile while Unity is updating",
+        }
         result = format_response(response, "compile")
 
         assert "✗ Error:" in result
@@ -399,7 +402,11 @@ class TestFormatGenericResponse:
         assert "Duration: 1.50s" in result
 
     def test_generic_failure(self):
-        response = {"action": "custom-action", "status": "failure", "error": "Something broke"}
+        response = {
+            "action": "custom-action",
+            "status": "failure",
+            "error": "Something broke",
+        }
         result = format_generic_response(response, "failure", 0.5)
 
         assert "✗ custom-action failed: Something broke" in result
@@ -487,7 +494,12 @@ class TestFormatConsoleLogsEdgeCases:
     def test_console_logs_with_warning(self):
         response = {
             "consoleLogs": [
-                {"message": "Deprecated API usage", "stackTrace": "", "type": "Warning", "count": 1}
+                {
+                    "message": "Deprecated API usage",
+                    "stackTrace": "",
+                    "type": "Warning",
+                    "count": 1,
+                }
             ]
         }
         result = format_console_logs(response)
@@ -992,7 +1004,12 @@ class TestMainFunction:
                                 "status": "success",
                                 "action": "run-tests",
                                 "duration_ms": 100,
-                                "result": {"passed": 5, "failed": 0, "skipped": 0, "failures": []},
+                                "result": {
+                                    "passed": 5,
+                                    "failed": 0,
+                                    "skipped": 0,
+                                    "failures": [],
+                                },
                             }
                         )
                     )
@@ -1088,7 +1105,8 @@ class TestMainFunction:
         with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             with patch("sys.argv", ["unity-bridge", "compile", "--timeout", "1"]):
                 with patch(
-                    "claude_unity_bridge.cli.execute_command", side_effect=KeyboardInterrupt
+                    "claude_unity_bridge.cli.execute_command",
+                    side_effect=KeyboardInterrupt,
                 ):
                     exit_code = main()
                     assert exit_code == EXIT_ERROR
@@ -1144,7 +1162,14 @@ class TestArgumentValidation:
     def test_limit_zero_rejected(self, tmp_path, capsys):
         """--limit 0 should fail validation"""
         with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
-            argv = ["unity-bridge", "get-console-logs", "--limit", "0", "--timeout", "1"]
+            argv = [
+                "unity-bridge",
+                "get-console-logs",
+                "--limit",
+                "0",
+                "--timeout",
+                "1",
+            ]
             with patch("sys.argv", argv):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
@@ -1157,7 +1182,14 @@ class TestArgumentValidation:
     def test_limit_negative_rejected(self, tmp_path, capsys):
         """--limit -1 should fail validation"""
         with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
-            argv = ["unity-bridge", "get-console-logs", "--limit", "-1", "--timeout", "1"]
+            argv = [
+                "unity-bridge",
+                "get-console-logs",
+                "--limit",
+                "-1",
+                "--timeout",
+                "1",
+            ]
             with patch("sys.argv", argv):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
@@ -1169,7 +1201,14 @@ class TestArgumentValidation:
     def test_limit_too_large_rejected(self, tmp_path, capsys):
         """--limit 1001 should fail validation (exceeds MAX_LIMIT)"""
         with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
-            argv = ["unity-bridge", "get-console-logs", "--limit", "1001", "--timeout", "1"]
+            argv = [
+                "unity-bridge",
+                "get-console-logs",
+                "--limit",
+                "1001",
+                "--timeout",
+                "1",
+            ]
             with patch("sys.argv", argv):
                 with pytest.raises(SystemExit) as exc_info:
                     main()
@@ -1183,7 +1222,14 @@ class TestArgumentValidation:
         """--limit 1 and --limit 1000 should be accepted"""
         with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
             # Test lower boundary
-            argv = ["unity-bridge", "get-console-logs", "--limit", "1", "--timeout", "1"]
+            argv = [
+                "unity-bridge",
+                "get-console-logs",
+                "--limit",
+                "1",
+                "--timeout",
+                "1",
+            ]
             with patch("sys.argv", argv):
 
                 def mock_write(action, params):
@@ -1207,7 +1253,14 @@ class TestArgumentValidation:
                     assert exit_code == EXIT_SUCCESS
 
             # Test upper boundary
-            argv = ["unity-bridge", "get-console-logs", "--limit", "1000", "--timeout", "1"]
+            argv = [
+                "unity-bridge",
+                "get-console-logs",
+                "--limit",
+                "1000",
+                "--timeout",
+                "1",
+            ]
             with patch("sys.argv", argv):
 
                 def mock_write_1000(action, params):
@@ -1240,9 +1293,14 @@ class TestSecurityValidation:
         target_dir = tmp_path / "real_dir"
         target_dir.mkdir()
 
-        # Create a symlink for the .unity-bridge directory
+        # Try to create a symlink for the .unity-bridge directory
         symlink_path = tmp_path / ".unity-bridge"
-        symlink_path.symlink_to(target_dir)
+        try:
+            symlink_path.symlink_to(target_dir)
+        except OSError:
+            # Can't create symlinks (Windows without Developer Mode)
+            # Skip this test as it requires symlink support
+            pytest.skip("Symlink creation not supported (requires Developer Mode on Windows)")
 
         with patch("claude_unity_bridge.cli.UNITY_DIR", symlink_path):
             with pytest.raises(UnityCommandError) as exc_info:
@@ -1366,7 +1424,7 @@ class TestSkillManagement:
         assert target_dir == Path.home() / ".claude" / "skills" / "unity-bridge"
 
     def test_install_skill_creates_symlink(self, tmp_path, capsys):
-        """install_skill should create a symlink to the skill directory"""
+        """install_skill should create a symlink or copy to the skill directory"""
         skills_dir = tmp_path / "skills"
 
         with patch.object(Path, "home", return_value=tmp_path / "home"):
@@ -1386,21 +1444,34 @@ class TestSkillManagement:
 
         assert result == EXIT_SUCCESS
         assert (skills_dir / "unity-bridge").exists()
-        assert (skills_dir / "unity-bridge").is_symlink()
+        # On Windows without Developer Mode, may be a copy instead of symlink
+        # Either is acceptable
+        assert (skills_dir / "unity-bridge").is_dir()
 
         captured = capsys.readouterr()
         assert "Skill installed" in captured.out
 
     def test_install_skill_replaces_existing_symlink(self, tmp_path, capsys):
-        """install_skill should replace an existing symlink"""
+        """install_skill should replace an existing symlink or directory"""
         skills_dir = tmp_path / "skills"
         skills_dir.mkdir(parents=True)
 
-        # Create an old symlink pointing somewhere else
+        # Create an old installation (try symlink, fall back to directory)
         old_target = tmp_path / "old_skill"
         old_target.mkdir()
-        symlink = skills_dir / "unity-bridge"
-        symlink.symlink_to(old_target)
+        (old_target / "old_file.txt").write_text("old")
+        target_path = skills_dir / "unity-bridge"
+
+        try:
+            target_path.symlink_to(old_target)
+            created_symlink = True
+        except OSError:
+            # Can't create symlink (Windows without Developer Mode)
+            # Create a directory instead to simulate old copied installation
+            import shutil
+
+            shutil.copytree(old_target, target_path)
+            created_symlink = False
 
         with patch(
             "claude_unity_bridge.cli.get_claude_skills_dir",
@@ -1408,21 +1479,25 @@ class TestSkillManagement:
         ):
             with patch(
                 "claude_unity_bridge.cli.get_skill_target_dir",
-                return_value=symlink,
+                return_value=target_path,
             ):
                 result = install_skill(verbose=True)
 
         assert result == EXIT_SUCCESS
-        assert symlink.exists()
-        assert symlink.is_symlink()
-        # Should point to new location, not old
-        assert symlink.resolve() != old_target
+        assert target_path.exists()
+        # New installation should not contain old file
+        assert not (target_path / "old_file.txt").exists()
+        # Should contain SKILL.md from new installation
+        assert (target_path / "SKILL.md").exists()
 
         captured = capsys.readouterr()
-        assert "Removing existing symlink" in captured.err
+        if created_symlink:
+            assert "Removing existing symlink" in captured.err
+        else:
+            assert "Removing existing directory" in captured.err
 
-    def test_install_skill_fails_when_directory_exists(self, tmp_path, capsys):
-        """install_skill should fail when target is a regular directory"""
+    def test_install_skill_removes_existing_directory(self, tmp_path, capsys):
+        """install_skill should remove and replace an existing directory"""
         skills_dir = tmp_path / "skills"
         skill_dir = skills_dir / "unity-bridge"
         skill_dir.mkdir(parents=True)
@@ -1438,12 +1513,16 @@ class TestSkillManagement:
                 "claude_unity_bridge.cli.get_skill_target_dir",
                 return_value=skill_dir,
             ):
-                result = install_skill(verbose=False)
+                result = install_skill(verbose=True)
 
-        assert result == EXIT_ERROR
+        assert result == EXIT_SUCCESS
+        # Old file should be gone
+        assert not (skill_dir / "some_file.txt").exists()
+        # New skill should be installed
+        assert (skill_dir / "SKILL.md").exists()
 
         captured = capsys.readouterr()
-        assert "not a symlink" in captured.err
+        assert "Removing existing directory" in captured.err
 
     def test_install_skill_fails_when_source_missing(self, tmp_path, capsys):
         """install_skill should fail when skill source directory is missing"""
@@ -1459,27 +1538,41 @@ class TestSkillManagement:
         assert "Could not find skill files" in captured.err
 
     def test_uninstall_skill_removes_symlink(self, tmp_path, capsys):
-        """uninstall_skill should remove the symlink"""
+        """uninstall_skill should remove the symlink or copied directory"""
         skills_dir = tmp_path / "skills"
         skills_dir.mkdir(parents=True)
 
-        # Create a symlink
+        # Try to create a symlink, fall back to copying if not possible
         target = tmp_path / "skill_target"
         target.mkdir()
-        symlink = skills_dir / "unity-bridge"
-        symlink.symlink_to(target)
+        (target / "SKILL.md").write_text("# Skill")
+        install_path = skills_dir / "unity-bridge"
+
+        try:
+            install_path.symlink_to(target)
+            is_symlink = True
+        except OSError:
+            # Can't create symlink, use copy instead
+            import shutil
+
+            shutil.copytree(target, install_path)
+            is_symlink = False
 
         with patch(
             "claude_unity_bridge.cli.get_skill_target_dir",
-            return_value=symlink,
+            return_value=install_path,
         ):
             result = uninstall_skill(verbose=False)
 
         assert result == EXIT_SUCCESS
-        assert not symlink.exists()
+        assert not install_path.exists()
 
         captured = capsys.readouterr()
         assert "Skill uninstalled" in captured.out
+        if is_symlink:
+            assert "symlink" in captured.out
+        else:
+            assert "directory" in captured.out
 
     def test_uninstall_skill_idempotent(self, tmp_path, capsys):
         """uninstall_skill should succeed even when skill is not installed"""
@@ -1498,11 +1591,13 @@ class TestSkillManagement:
         captured = capsys.readouterr()
         assert "not installed" in captured.out
 
-    def test_uninstall_skill_warns_on_directory(self, tmp_path, capsys):
-        """uninstall_skill should warn when target is a directory, not symlink"""
+    def test_uninstall_skill_removes_skill_directory(self, tmp_path, capsys):
+        """uninstall_skill should remove a directory that contains SKILL.md"""
         skills_dir = tmp_path / "skills"
         skill_dir = skills_dir / "unity-bridge"
         skill_dir.mkdir(parents=True)
+        # Add SKILL.md to make it look like a valid skill installation
+        (skill_dir / "SKILL.md").write_text("# Skill")
 
         with patch(
             "claude_unity_bridge.cli.get_skill_target_dir",
@@ -1510,11 +1605,11 @@ class TestSkillManagement:
         ):
             result = uninstall_skill(verbose=False)
 
-        assert result == EXIT_ERROR
+        assert result == EXIT_SUCCESS
+        assert not skill_dir.exists()
 
         captured = capsys.readouterr()
-        assert "not a symlink" in captured.err
-        assert "rm -rf" in captured.err
+        assert "Skill uninstalled: removed directory" in captured.out
 
     def test_main_install_skill(self, tmp_path, capsys):
         """Test install-skill command via main()"""
@@ -1538,27 +1633,35 @@ class TestSkillManagement:
         skills_dir = tmp_path / "skills"
         skills_dir.mkdir(parents=True)
 
-        # Create a symlink to uninstall
+        # Create an installation to uninstall (try symlink, fall back to copy)
         target = tmp_path / "skill_target"
         target.mkdir()
-        symlink = skills_dir / "unity-bridge"
-        symlink.symlink_to(target)
+        (target / "SKILL.md").write_text("# Skill")
+        install_path = skills_dir / "unity-bridge"
+
+        try:
+            install_path.symlink_to(target)
+        except OSError:
+            # Can't create symlink, use copy instead
+            import shutil
+
+            shutil.copytree(target, install_path)
 
         with patch("sys.argv", ["unity-bridge", "uninstall-skill"]):
             with patch(
                 "claude_unity_bridge.cli.get_skill_target_dir",
-                return_value=symlink,
+                return_value=install_path,
             ):
                 exit_code = main()
 
         assert exit_code == EXIT_SUCCESS
 
-    def test_install_skill_fails_when_regular_file_exists(self, tmp_path, capsys):
-        """install_skill should fail when target is a regular file"""
+    def test_install_skill_removes_regular_file(self, tmp_path, capsys):
+        """install_skill should remove and replace a regular file"""
         skills_dir = tmp_path / "skills"
         skills_dir.mkdir(parents=True)
         target_file = skills_dir / "unity-bridge"
-        target_file.write_text("not a symlink")
+        target_file.write_text("not a symlink or directory")
 
         with patch(
             "claude_unity_bridge.cli.get_claude_skills_dir",
@@ -1568,13 +1671,16 @@ class TestSkillManagement:
                 "claude_unity_bridge.cli.get_skill_target_dir",
                 return_value=target_file,
             ):
-                result = install_skill(verbose=False)
+                result = install_skill(verbose=True)
 
-        assert result == EXIT_ERROR
+        assert result == EXIT_SUCCESS
+        # Should now be a directory (or symlink), not a file
+        assert target_file.is_dir() or target_file.is_symlink()
+        # Should contain SKILL.md
+        assert (target_file / "SKILL.md").exists()
 
         captured = capsys.readouterr()
-        assert "not a symlink" in captured.err
-        assert "rm " in captured.err
+        assert "Removing existing file" in captured.err
 
     def test_update_package_success(self, tmp_path, capsys):
         """update_package should upgrade pip package and reinstall skill"""
@@ -1638,6 +1744,138 @@ class TestSkillManagement:
                         exit_code = main()
 
         assert exit_code == EXIT_SUCCESS
+
+    def test_install_skill_copy_fallback_on_symlink_failure(self, tmp_path, capsys):
+        """install_skill should fall back to copying when symlink creation fails"""
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir(parents=True)
+        target_dir = skills_dir / "unity-bridge"
+
+        def mock_symlink_to(self, target):
+            raise OSError("[WinError 1314] A required privilege is not held by the client")
+
+        with patch.object(Path, "symlink_to", mock_symlink_to):
+            with patch(
+                "claude_unity_bridge.cli.get_claude_skills_dir",
+                return_value=skills_dir,
+            ):
+                with patch(
+                    "claude_unity_bridge.cli.get_skill_target_dir",
+                    return_value=target_dir,
+                ):
+                    result = install_skill(verbose=True)
+
+        assert result == EXIT_SUCCESS
+        assert target_dir.exists()
+        assert target_dir.is_dir()
+        assert not target_dir.is_symlink()
+        assert (target_dir / "SKILL.md").exists()
+
+        captured = capsys.readouterr()
+        assert "Symlink creation failed" in captured.err
+        assert "Falling back to directory copy" in captured.err
+        assert "Skill installed (copy)" in captured.out
+        assert "Using directory copy instead of symlink" in captured.out
+
+    def test_install_skill_copy_fallback_failure(self, tmp_path, capsys):
+        """install_skill should fail gracefully when both symlink and copy fail"""
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir(parents=True)
+        target_dir = skills_dir / "unity-bridge"
+
+        def mock_symlink_to(self, target):
+            raise OSError("[WinError 1314] A required privilege is not held by the client")
+
+        with patch.object(Path, "symlink_to", mock_symlink_to):
+            with patch("shutil.copytree", side_effect=PermissionError("Permission denied")):
+                with patch(
+                    "claude_unity_bridge.cli.get_claude_skills_dir",
+                    return_value=skills_dir,
+                ):
+                    with patch(
+                        "claude_unity_bridge.cli.get_skill_target_dir",
+                        return_value=target_dir,
+                    ):
+                        result = install_skill(verbose=False)
+
+        assert result == EXIT_ERROR
+
+        captured = capsys.readouterr()
+        assert "Could not create symlink or copy directory" in captured.err
+
+    def test_install_skill_replaces_existing_directory(self, tmp_path, capsys):
+        """install_skill should replace an existing copied directory"""
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir(parents=True)
+        target_dir = skills_dir / "unity-bridge"
+
+        # Create an existing directory (from previous copy install)
+        target_dir.mkdir()
+        (target_dir / "old_file.txt").write_text("old")
+
+        with patch(
+            "claude_unity_bridge.cli.get_claude_skills_dir",
+            return_value=skills_dir,
+        ):
+            with patch(
+                "claude_unity_bridge.cli.get_skill_target_dir",
+                return_value=target_dir,
+            ):
+                result = install_skill(verbose=True)
+
+        assert result == EXIT_SUCCESS
+        assert target_dir.exists()
+        # Old file should be gone
+        assert not (target_dir / "old_file.txt").exists()
+        # New skill should be present
+        assert (target_dir / "SKILL.md").exists()
+
+        captured = capsys.readouterr()
+        assert "Removing existing directory" in captured.err
+
+    def test_uninstall_skill_removes_copied_directory(self, tmp_path, capsys):
+        """uninstall_skill should remove a copied skill directory"""
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir(parents=True)
+        target_dir = skills_dir / "unity-bridge"
+
+        # Simulate a copied installation
+        target_dir.mkdir()
+        (target_dir / "SKILL.md").write_text("# Skill")
+        (target_dir / "scripts").mkdir()
+
+        with patch(
+            "claude_unity_bridge.cli.get_skill_target_dir",
+            return_value=target_dir,
+        ):
+            result = uninstall_skill(verbose=False)
+
+        assert result == EXIT_SUCCESS
+        assert not target_dir.exists()
+
+        captured = capsys.readouterr()
+        assert "Skill uninstalled: removed directory" in captured.out
+
+    def test_uninstall_skill_warns_on_non_skill_directory(self, tmp_path, capsys):
+        """uninstall_skill should warn when directory doesn't look like a skill"""
+        skills_dir = tmp_path / "skills"
+        skills_dir.mkdir(parents=True)
+        target_dir = skills_dir / "unity-bridge"
+
+        # Create a directory without SKILL.md
+        target_dir.mkdir()
+        (target_dir / "random_file.txt").write_text("not a skill")
+
+        with patch(
+            "claude_unity_bridge.cli.get_skill_target_dir",
+            return_value=target_dir,
+        ):
+            result = uninstall_skill(verbose=False)
+
+        assert result == EXIT_ERROR
+
+        captured = capsys.readouterr()
+        assert "doesn't appear to be a skill installation" in captured.err
 
 
 class TestUUIDValidation:

@@ -19,8 +19,14 @@ File-based bridge enabling Claude Code to trigger Unity Editor operations in a r
 
 ### 1. Install
 
+**macOS / Linux / Git Bash:**
 ```bash
 curl -sSL https://raw.githubusercontent.com/ManageXR/claude-unity-bridge/main/install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/ManageXR/claude-unity-bridge/main/install.ps1 | iex
 ```
 
 ### 2. Add to Your Unity Project(s)

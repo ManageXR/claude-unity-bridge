@@ -12,6 +12,8 @@ import argparse
 import json
 import os
 import re
+import platform
+import shutil
 import subprocess
 import sys
 import time
@@ -194,7 +196,10 @@ def wait_for_response(command_id: str, timeout: int, verbose: bool = False) -> D
             except json.JSONDecodeError:
                 # Might have caught it mid-write, retry once
                 if verbose:
-                    print("Warning: Failed to parse response, retrying...", file=sys.stderr)
+                    print(
+                        "Warning: Failed to parse response, retrying...",
+                        file=sys.stderr,
+                    )
                 time.sleep(0.2)
                 try:
                     response_text = response_file.read_text()
@@ -596,7 +601,7 @@ def get_skill_target_dir() -> Path:
 
 def install_skill(verbose: bool = False) -> int:
     """
-    Install the Claude Code skill by creating a symlink.
+    Install the Claude Code skill by creating a symlink (with copy fallback on Windows).
 
     Returns:
         Exit code (0 for success, 1 for error).
@@ -606,7 +611,8 @@ def install_skill(verbose: bool = False) -> int:
         print("Error: Could not find skill files in package.", file=sys.stderr)
         print("This may indicate a corrupted installation.", file=sys.stderr)
         print(
-            "Try reinstalling: pip install --force-reinstall claude-unity-bridge", file=sys.stderr
+            "Try reinstalling: pip install --force-reinstall claude-unity-bridge",
+            file=sys.stderr,
         )
         return EXIT_ERROR
 
@@ -629,7 +635,7 @@ def install_skill(verbose: bool = False) -> int:
 
     target_dir = get_skill_target_dir()
 
-    # Remove existing symlink or directory
+    # Remove existing installation
     if target_dir.exists() or target_dir.is_symlink():
         if target_dir.is_symlink():
             if verbose:
@@ -640,24 +646,69 @@ def install_skill(verbose: bool = False) -> int:
                 print(f"Error: Could not remove existing symlink: {e}", file=sys.stderr)
                 return EXIT_ERROR
         elif target_dir.is_dir():
-            print(f"Warning: {target_dir} exists and is not a symlink.", file=sys.stderr)
-            print("Remove it manually if you want to use symlink installation.", file=sys.stderr)
-            print(f"  rm -rf {target_dir}", file=sys.stderr)
-            return EXIT_ERROR
+            if verbose:
+                print(f"Removing existing directory: {target_dir}", file=sys.stderr)
+            try:
+                shutil.rmtree(target_dir)
+            except Exception as e:
+                print(f"Error: Could not remove existing directory: {e}", file=sys.stderr)
+                return EXIT_ERROR
         else:
-            print(f"Warning: {target_dir} exists and is not a symlink.", file=sys.stderr)
-            print("Remove it manually if you want to use symlink installation.", file=sys.stderr)
-            print(f"  rm {target_dir}", file=sys.stderr)
-            return EXIT_ERROR
+            # Regular file
+            if verbose:
+                print(f"Removing existing file: {target_dir}", file=sys.stderr)
+            try:
+                target_dir.unlink()
+            except Exception as e:
+                print(f"Error: Could not remove existing file: {e}", file=sys.stderr)
+                return EXIT_ERROR
 
-    # Create symlink
+    # Try to create symlink first
+    used_copy_fallback = False
     try:
         target_dir.symlink_to(source_dir)
-    except Exception as e:
-        print(f"Error: Could not create symlink: {e}", file=sys.stderr)
-        return EXIT_ERROR
+        if verbose:
+            print(f"Created symlink: {target_dir} -> {source_dir}", file=sys.stderr)
+    except (OSError, NotImplementedError) as e:
+        # Symlink creation failed (likely Windows permissions or unsupported filesystem)
+        # Fall back to directory copy
+        if verbose:
+            print(f"Symlink creation failed: {e}", file=sys.stderr)
+            print("Falling back to directory copy...", file=sys.stderr)
 
-    print(f"✓ Skill installed: {target_dir} -> {source_dir}")
+        try:
+            shutil.copytree(source_dir, target_dir)
+            used_copy_fallback = True
+            if verbose:
+                print(f"Copied skill files to: {target_dir}", file=sys.stderr)
+        except Exception as copy_error:
+            print(
+                f"Error: Could not create symlink or copy directory: {copy_error}",
+                file=sys.stderr,
+            )
+            if platform.system() == "Windows":
+                print()
+                print("On Windows, symlinks require either:", file=sys.stderr)
+                print("  - Administrator privileges, or", file=sys.stderr)
+                print(
+                    "  - Developer Mode enabled (Settings > Update & Security > For developers)",
+                    file=sys.stderr,
+                )
+            return EXIT_ERROR
+
+    # Success message
+    if used_copy_fallback:
+        print(f"✓ Skill installed (copy): {target_dir}")
+        print()
+        print("Note: Using directory copy instead of symlink.")
+        print("To update the skill, re-run: python -m claude_unity_bridge.cli install-skill")
+        if platform.system() == "Windows":
+            print()
+            print("To enable symlinks (optional), enable Developer Mode:")
+            print("  Settings > Update & Security > For developers > Developer Mode")
+    else:
+        print(f"✓ Skill installed (symlink): {target_dir} -> {source_dir}")
+
     print()
     print("The Claude Code skill is now available.")
     print("Restart Claude Code to load the skill, then ask Claude naturally:")
@@ -670,7 +721,7 @@ def install_skill(verbose: bool = False) -> int:
 
 def uninstall_skill(verbose: bool = False) -> int:
     """
-    Uninstall the Claude Code skill by removing the symlink.
+    Uninstall the Claude Code skill by removing the symlink or copied directory.
 
     Returns:
         Exit code (0 for success, 1 for error).
@@ -684,15 +735,44 @@ def uninstall_skill(verbose: bool = False) -> int:
     if target_dir.is_symlink():
         try:
             target_dir.unlink()
-            print(f"✓ Skill uninstalled: removed {target_dir}")
+            print(f"✓ Skill uninstalled: removed symlink {target_dir}")
             return EXIT_SUCCESS
         except Exception as e:
             print(f"Error: Could not remove symlink: {e}", file=sys.stderr)
             return EXIT_ERROR
+    elif target_dir.is_dir():
+        # Check if this is a copied skill directory (contains SKILL.md)
+        if (target_dir / "SKILL.md").exists():
+            try:
+                shutil.rmtree(target_dir)
+                print(f"✓ Skill uninstalled: removed directory {target_dir}")
+                return EXIT_SUCCESS
+            except Exception as e:
+                print(f"Error: Could not remove directory: {e}", file=sys.stderr)
+                return EXIT_ERROR
+        else:
+            # Directory exists but doesn't look like our skill
+            print(
+                f"Warning: {target_dir} exists but doesn't appear to be a skill installation.",
+                file=sys.stderr,
+            )
+            print("Remove it manually if desired:", file=sys.stderr)
+            if platform.system() == "Windows":
+                print(f"  rmdir /s {target_dir}", file=sys.stderr)
+            else:
+                print(f"  rm -rf {target_dir}", file=sys.stderr)
+            return EXIT_ERROR
     else:
-        print(f"Warning: {target_dir} exists but is not a symlink.", file=sys.stderr)
+        # Regular file
+        print(
+            f"Warning: {target_dir} exists but is not a symlink or directory.",
+            file=sys.stderr,
+        )
         print("Remove it manually if desired:", file=sys.stderr)
-        print(f"  rm -rf {target_dir}", file=sys.stderr)
+        if platform.system() == "Windows":
+            print(f"  del {target_dir}", file=sys.stderr)
+        else:
+            print(f"  rm {target_dir}", file=sys.stderr)
         return EXIT_ERROR
 
 
@@ -708,7 +788,14 @@ def update_package(verbose: bool = False) -> int:
     try:
         # Run pip install --upgrade
         result = subprocess.run(
-            [sys.executable, "-m", "pip", "install", "--upgrade", "claude-unity-bridge"],
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "--upgrade",
+                "claude-unity-bridge",
+            ],
             capture_output=not verbose,
             text=True,
         )
@@ -815,7 +902,9 @@ Examples:
 
     # Console logs options
     parser.add_argument(
-        "--limit", type=int, help="Maximum number of logs to retrieve (for get-console-logs)"
+        "--limit",
+        type=int,
+        help="Maximum number of logs to retrieve (for get-console-logs)",
     )
 
     # General options
@@ -826,7 +915,9 @@ Examples:
         help=f"Command timeout in seconds (default: {DEFAULT_TIMEOUT})",
     )
     parser.add_argument(
-        "--cleanup", action="store_true", help="Cleanup old response files before executing"
+        "--cleanup",
+        action="store_true",
+        help="Cleanup old response files before executing",
     )
     parser.add_argument("--verbose", action="store_true", help="Print verbose progress messages")
 
