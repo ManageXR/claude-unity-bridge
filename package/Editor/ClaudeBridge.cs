@@ -39,7 +39,10 @@ namespace MXR.ClaudeBridge {
                 { "compile", new CompileCommand() },
                 { "refresh", new RefreshCommand() },
                 { "get-status", new GetStatusCommand() },
-                { "get-console-logs", new GetConsoleLogsCommand() }
+                { "get-console-logs", new GetConsoleLogsCommand() },
+                { "play", new PlayCommand() },
+                { "pause", new PauseCommand() },
+                { "step", new StepCommand() }
             };
 
             EnsureDirectoryExists();
