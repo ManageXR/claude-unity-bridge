@@ -272,6 +272,8 @@ def format_response(response: Dict[str, Any], action: str) -> str:
         return format_editor_status(response)
     elif action == "refresh":
         return format_refresh_results(response, status, duration_sec)
+    elif action in ("play", "pause", "step"):
+        return format_play_mode_result(response, status, duration_sec)
     else:
         # Generic formatting
         return format_generic_response(response, status, duration_sec)
@@ -414,6 +416,26 @@ def format_refresh_results(response: Dict[str, Any], status: str, duration: floa
         return f"✗ Refresh Failed: {error}\nDuration: {duration:.2f}s"
     else:
         return f"Refresh Status: {status}\nDuration: {duration:.2f}s"
+
+
+def format_play_mode_result(response: Dict[str, Any], status: str, duration: float) -> str:
+    """Format play/pause/step response"""
+    action = response.get("action", "unknown")
+    editor_status = response.get("editorStatus")
+
+    if status == "success" and editor_status:
+        is_playing = editor_status.get("isPlaying", False)
+        is_paused = editor_status.get("isPaused", False)
+        if is_playing:
+            state = "⏸ Paused" if is_paused else "▶ Playing"
+        else:
+            state = "⏹ Stopped"
+        return f"✓ {action} completed\nPlay Mode: {state}\nDuration: {duration:.2f}s"
+    elif status == "failure":
+        error = response.get("error", "Unknown error")
+        return f"✗ {action} failed: {error}\nDuration: {duration:.2f}s"
+    else:
+        return format_generic_response(response, status, duration)
 
 
 def format_generic_response(response: Dict[str, Any], status: str, duration: float) -> str:
@@ -857,6 +879,9 @@ Unity Commands:
   refresh            Refresh asset database
   get-status         Get editor status
   get-console-logs   Get Unity console logs
+  play               Toggle Play Mode (enter/exit)
+  pause              Toggle pause (while in Play Mode)
+  step               Step one frame (while in Play Mode)
   health-check       Verify Unity Bridge setup
 
 Skill Commands:
@@ -870,6 +895,9 @@ Examples:
   %(prog)s get-console-logs --limit 20 --filter Error
   %(prog)s get-status
   %(prog)s refresh
+  %(prog)s play
+  %(prog)s pause
+  %(prog)s step
   %(prog)s health-check
   %(prog)s install-skill
         """,
@@ -883,6 +911,9 @@ Examples:
             "refresh",
             "get-status",
             "get-console-logs",
+            "play",
+            "pause",
+            "step",
             "health-check",
             "install-skill",
             "uninstall-skill",

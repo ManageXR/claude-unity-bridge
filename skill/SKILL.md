@@ -1,6 +1,6 @@
 ---
 name: unity
-description: Execute Unity Editor commands (run tests, compile, get logs, refresh assets) via file-based bridge. Auto-activates for Unity-related tasks. Requires com.mxr.claude-bridge package installed in Unity project.
+description: Execute Unity Editor commands (run tests, compile, get logs, refresh assets, play/pause/step) via file-based bridge. Auto-activates for Unity-related tasks. Requires com.mxr.claude-bridge package installed in Unity project.
 ---
 
 # Unity Bridge Skill
@@ -17,6 +17,7 @@ The Unity Bridge enables Claude Code to trigger operations in a running Unity Ed
 - Refresh asset database
 - Check editor status (compilation, play mode, etc.)
 - Retrieve Unity console logs
+- Control Play Mode (play, pause, step)
 
 **Multi-Project Support:** Each Unity project has its own `.unity-bridge/` directory, allowing multiple projects to be worked on simultaneously.
 
@@ -184,6 +185,47 @@ unity-bridge refresh
 Duration: 0.5s
 ```
 
+#### Play Mode Control
+
+Toggle Play Mode, pause, and step through frames:
+
+```bash
+# Enter/exit Play Mode (toggle)
+unity-bridge play
+
+# Pause/unpause (while in Play Mode)
+unity-bridge pause
+
+# Step one frame (while in Play Mode)
+unity-bridge step
+```
+
+**Output (play):**
+```
+✓ play completed
+Play Mode: ▶ Playing
+Duration: 0.01s
+```
+
+**Output (pause):**
+```
+✓ pause completed
+Play Mode: ⏸ Paused
+Duration: 0.01s
+```
+
+**Output (step):**
+```
+✓ step completed
+Play Mode: ⏸ Paused
+Duration: 0.02s
+```
+
+**Notes:**
+- `play` toggles Play Mode on/off (like the Play button in Unity)
+- `pause` and `step` require Play Mode to be active; returns error if not playing
+- All three return the resulting `editorStatus` so the caller knows the current state
+
 ### Advanced Options
 
 #### Timeout Configuration
@@ -255,6 +297,9 @@ When you're working in a Unity project directory, you can ask Claude Code to per
 - "Check if there are any compilation errors"
 - "Show me the last 10 error logs from Unity"
 - "Refresh the Unity asset database"
+- "Enter Play Mode"
+- "Pause the editor"
+- "Step one frame"
 
 Claude Code will automatically use this skill to execute the commands via the Python script.
 

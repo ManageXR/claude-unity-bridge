@@ -19,6 +19,7 @@ from claude_unity_bridge.cli import (
     format_console_logs,
     format_editor_status,
     format_refresh_results,
+    format_play_mode_result,
     format_generic_response,
     write_command,
     wait_for_response,
@@ -233,6 +234,113 @@ class TestFormatRefreshResults:
         assert "I/O error" in result
 
 
+class TestFormatPlayModeResult:
+    """Test formatting of play/pause/step results"""
+
+    def test_play_enter_play_mode(self):
+        response = {
+            "action": "play",
+            "status": "success",
+            "editorStatus": {
+                "isCompiling": False,
+                "isUpdating": False,
+                "isPlaying": True,
+                "isPaused": False,
+            },
+        }
+        result = format_play_mode_result(response, "success", 0.01)
+
+        assert "✓ play completed" in result
+        assert "▶ Playing" in result
+        assert "Duration: 0.01s" in result
+
+    def test_play_exit_play_mode(self):
+        response = {
+            "action": "play",
+            "status": "success",
+            "editorStatus": {
+                "isCompiling": False,
+                "isUpdating": False,
+                "isPlaying": False,
+                "isPaused": False,
+            },
+        }
+        result = format_play_mode_result(response, "success", 0.01)
+
+        assert "✓ play completed" in result
+        assert "⏹ Stopped" in result
+
+    def test_pause_while_playing(self):
+        response = {
+            "action": "pause",
+            "status": "success",
+            "editorStatus": {
+                "isCompiling": False,
+                "isUpdating": False,
+                "isPlaying": True,
+                "isPaused": True,
+            },
+        }
+        result = format_play_mode_result(response, "success", 0.01)
+
+        assert "✓ pause completed" in result
+        assert "⏸ Paused" in result
+
+    def test_unpause_while_playing(self):
+        response = {
+            "action": "pause",
+            "status": "success",
+            "editorStatus": {
+                "isCompiling": False,
+                "isUpdating": False,
+                "isPlaying": True,
+                "isPaused": False,
+            },
+        }
+        result = format_play_mode_result(response, "success", 0.01)
+
+        assert "✓ pause completed" in result
+        assert "▶ Playing" in result
+
+    def test_step_while_playing(self):
+        response = {
+            "action": "step",
+            "status": "success",
+            "editorStatus": {
+                "isCompiling": False,
+                "isUpdating": False,
+                "isPlaying": True,
+                "isPaused": True,
+            },
+        }
+        result = format_play_mode_result(response, "success", 0.02)
+
+        assert "✓ step completed" in result
+        assert "⏸ Paused" in result
+        assert "Duration: 0.02s" in result
+
+    def test_failure_response(self):
+        response = {
+            "action": "pause",
+            "status": "failure",
+            "error": "Cannot pause: not in play mode",
+        }
+        result = format_play_mode_result(response, "failure", 0.01)
+
+        assert "✗ pause failed" in result
+        assert "Cannot pause: not in play mode" in result
+
+    def test_missing_editor_status_falls_through(self):
+        response = {
+            "action": "play",
+            "status": "success",
+        }
+        result = format_play_mode_result(response, "success", 0.01)
+
+        # Should fall through to generic formatting
+        assert "play completed successfully" in result
+
+
 class TestFormatResponse:
     """Test main format_response function"""
 
@@ -435,6 +543,63 @@ class TestFormatResponseBranches:
         response = {"status": "success", "duration_ms": 500}
         result = format_response(response, "refresh")
         assert "Asset Database Refreshed" in result
+
+    def test_format_play(self):
+        response = {
+            "status": "success",
+            "action": "play",
+            "duration_ms": 10,
+            "editorStatus": {
+                "isCompiling": False,
+                "isUpdating": False,
+                "isPlaying": True,
+                "isPaused": False,
+            },
+        }
+        result = format_response(response, "play")
+        assert "play completed" in result
+        assert "▶ Playing" in result
+
+    def test_format_pause(self):
+        response = {
+            "status": "success",
+            "action": "pause",
+            "duration_ms": 10,
+            "editorStatus": {
+                "isCompiling": False,
+                "isUpdating": False,
+                "isPlaying": True,
+                "isPaused": True,
+            },
+        }
+        result = format_response(response, "pause")
+        assert "pause completed" in result
+        assert "⏸ Paused" in result
+
+    def test_format_step(self):
+        response = {
+            "status": "success",
+            "action": "step",
+            "duration_ms": 10,
+            "editorStatus": {
+                "isCompiling": False,
+                "isUpdating": False,
+                "isPlaying": True,
+                "isPaused": True,
+            },
+        }
+        result = format_response(response, "step")
+        assert "step completed" in result
+
+    def test_format_play_error(self):
+        response = {
+            "status": "error",
+            "action": "pause",
+            "error": "Cannot pause: Unity Editor is not in Play Mode.",
+        }
+        result = format_response(response, "pause")
+        assert "✗ Error:" in result
+        assert "not in Play Mode" in result
 
     def test_format_unknown_action(self):
         response = {"action": "unknown-action", "status": "success", "duration_ms": 100}
@@ -1066,6 +1231,96 @@ class TestMainFunction:
                     return "Unity Editor Status:\n  - Compilation: ✓ Ready"
 
                 with patch("claude_unity_bridge.cli.execute_command", side_effect=mock_execute):
+                    exit_code = main()
+                    assert exit_code == EXIT_SUCCESS
+
+    def test_main_play(self, tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            argv = ["unity-bridge", "play", "--timeout", "1"]
+            with patch("sys.argv", argv):
+
+                def mock_write(action, params):
+                    command_id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    response_file = tmp_path / f"response-{command_id}.json"
+                    response_file.write_text(
+                        json.dumps(
+                            {
+                                "id": command_id,
+                                "status": "success",
+                                "action": "play",
+                                "duration_ms": 10,
+                                "editorStatus": {
+                                    "isCompiling": False,
+                                    "isUpdating": False,
+                                    "isPlaying": True,
+                                    "isPaused": False,
+                                },
+                            }
+                        )
+                    )
+                    return command_id
+
+                with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write):
+                    exit_code = main()
+                    assert exit_code == EXIT_SUCCESS
+
+    def test_main_pause(self, tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            argv = ["unity-bridge", "pause", "--timeout", "1"]
+            with patch("sys.argv", argv):
+
+                def mock_write(action, params):
+                    command_id = "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+                    response_file = tmp_path / f"response-{command_id}.json"
+                    response_file.write_text(
+                        json.dumps(
+                            {
+                                "id": command_id,
+                                "status": "success",
+                                "action": "pause",
+                                "duration_ms": 10,
+                                "editorStatus": {
+                                    "isCompiling": False,
+                                    "isUpdating": False,
+                                    "isPlaying": True,
+                                    "isPaused": True,
+                                },
+                            }
+                        )
+                    )
+                    return command_id
+
+                with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write):
+                    exit_code = main()
+                    assert exit_code == EXIT_SUCCESS
+
+    def test_main_step(self, tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            argv = ["unity-bridge", "step", "--timeout", "1"]
+            with patch("sys.argv", argv):
+
+                def mock_write(action, params):
+                    command_id = "c3d4e5f6-a7b8-9012-cdef-123456789012"
+                    response_file = tmp_path / f"response-{command_id}.json"
+                    response_file.write_text(
+                        json.dumps(
+                            {
+                                "id": command_id,
+                                "status": "success",
+                                "action": "step",
+                                "duration_ms": 10,
+                                "editorStatus": {
+                                    "isCompiling": False,
+                                    "isUpdating": False,
+                                    "isPlaying": True,
+                                    "isPaused": True,
+                                },
+                            }
+                        )
+                    )
+                    return command_id
+
+                with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write):
                     exit_code = main()
                     assert exit_code == EXIT_SUCCESS
 
