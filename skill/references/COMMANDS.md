@@ -9,6 +9,9 @@ Complete specification for all Unity Bridge commands, including parameters, resp
 - [refresh](#refresh) - Refresh asset database
 - [get-status](#get-status) - Get editor status
 - [get-console-logs](#get-console-logs) - Retrieve console logs
+- [play](#play) - Toggle Play Mode
+- [pause](#pause) - Toggle pause in Play Mode
+- [step](#step) - Step one frame in Play Mode
 
 ---
 
@@ -652,6 +655,261 @@ unity-bridge get-console-logs --limit 5
 # Check for errors after compilation
 unity-bridge compile
 unity-bridge get-console-logs --filter Error --limit 10
+```
+
+---
+
+## play
+
+Toggle Unity Editor Play Mode. If not playing, enters Play Mode; if playing, exits Play Mode.
+
+### Usage
+
+```bash
+unity-bridge play [options]
+```
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `--timeout` | int | No | 30 | Command timeout in seconds |
+
+### Response Format
+
+**Success:**
+```json
+{
+  "id": "uuid",
+  "status": "success",
+  "action": "play",
+  "duration_ms": 10,
+  "editorStatus": {
+    "isCompiling": false,
+    "isUpdating": false,
+    "isPlaying": true,
+    "isPaused": false
+  }
+}
+```
+
+### Formatted Output
+
+**Entering Play Mode:**
+```
+✓ play completed
+Play Mode: ▶ Playing
+Duration: 0.01s
+```
+
+**Exiting Play Mode:**
+```
+✓ play completed
+Play Mode: ⏹ Stopped
+Duration: 0.01s
+```
+
+### Error Scenarios
+
+**Blocked during compilation:**
+```json
+{
+  "id": "uuid",
+  "status": "error",
+  "action": "play",
+  "error": "Unity Editor is currently compiling. Only read-only commands (get-status, get-console-logs) are available. Try again later."
+}
+```
+
+### Notes
+
+- **Toggle behavior:** Acts like the Play button in Unity — toggles between playing and editing
+- **Blocked during compilation:** Cannot enter/exit Play Mode while scripts are compiling
+- **Response includes editorStatus:** Always check the returned `editorStatus` to confirm the resulting state
+- **Domain reload:** Entering/exiting Play Mode may trigger a domain reload, which takes time
+
+### Examples
+
+```bash
+# Enter Play Mode
+unity-bridge play
+
+# Check state after toggling
+unity-bridge get-status
+
+# Exit Play Mode (call again)
+unity-bridge play
+```
+
+---
+
+## pause
+
+Toggle the pause state while in Play Mode. If playing, pauses; if paused, unpauses.
+
+### Usage
+
+```bash
+unity-bridge pause [options]
+```
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `--timeout` | int | No | 30 | Command timeout in seconds |
+
+### Response Format
+
+**Success:**
+```json
+{
+  "id": "uuid",
+  "status": "success",
+  "action": "pause",
+  "duration_ms": 5,
+  "editorStatus": {
+    "isCompiling": false,
+    "isUpdating": false,
+    "isPlaying": true,
+    "isPaused": true
+  }
+}
+```
+
+### Formatted Output
+
+**Pausing:**
+```
+✓ pause completed
+Play Mode: ⏸ Paused
+Duration: 0.01s
+```
+
+**Unpausing:**
+```
+✓ pause completed
+Play Mode: ▶ Playing
+Duration: 0.01s
+```
+
+### Error Scenarios
+
+**Not in Play Mode:**
+```json
+{
+  "id": "uuid",
+  "status": "error",
+  "action": "pause",
+  "error": "Cannot pause: Unity Editor is not in Play Mode. Use 'play' to enter Play Mode first."
+}
+```
+
+Formatted as:
+```
+✗ Error: Cannot pause: Unity Editor is not in Play Mode. Use 'play' to enter Play Mode first.
+```
+
+### Notes
+
+- **Requires Play Mode:** Returns error if not currently in Play Mode
+- **Toggle behavior:** Like the Pause button in Unity
+- **Inspection:** While paused, you can inspect GameObjects and variables in the editor
+
+### Examples
+
+```bash
+# Enter Play Mode, then pause
+unity-bridge play
+unity-bridge pause
+
+# Unpause
+unity-bridge pause
+
+# Check current state
+unity-bridge get-status
+```
+
+---
+
+## step
+
+Step one frame forward in Play Mode. If not paused, Unity will pause first then step.
+
+### Usage
+
+```bash
+unity-bridge step [options]
+```
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `--timeout` | int | No | 30 | Command timeout in seconds |
+
+### Response Format
+
+**Success:**
+```json
+{
+  "id": "uuid",
+  "status": "success",
+  "action": "step",
+  "duration_ms": 20,
+  "editorStatus": {
+    "isCompiling": false,
+    "isUpdating": false,
+    "isPlaying": true,
+    "isPaused": true
+  }
+}
+```
+
+### Formatted Output
+
+```
+✓ step completed
+Play Mode: ⏸ Paused
+Duration: 0.02s
+```
+
+### Error Scenarios
+
+**Not in Play Mode:**
+```json
+{
+  "id": "uuid",
+  "status": "error",
+  "action": "step",
+  "error": "Cannot step: Unity Editor is not in Play Mode. Use 'play' to enter Play Mode first."
+}
+```
+
+Formatted as:
+```
+✗ Error: Cannot step: Unity Editor is not in Play Mode. Use 'play' to enter Play Mode first.
+```
+
+### Notes
+
+- **Requires Play Mode:** Returns error if not currently in Play Mode
+- **Auto-pause:** If Unity is playing (not paused), stepping will pause first then advance one frame
+- **Frame-by-frame debugging:** Useful for inspecting state changes one frame at a time
+- **Stays paused:** After stepping, the editor remains paused
+
+### Examples
+
+```bash
+# Enter Play Mode, pause, then step through frames
+unity-bridge play
+unity-bridge pause
+unity-bridge step
+unity-bridge step
+unity-bridge step
+
+# Check state between steps
+unity-bridge get-status
 ```
 
 ---

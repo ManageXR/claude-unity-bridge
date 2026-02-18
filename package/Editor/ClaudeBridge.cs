@@ -34,12 +34,17 @@ namespace MXR.ClaudeBridge {
             CommandDir = Path.Combine(Application.dataPath, "..", ".unity-bridge");
             CommandFilePath = Path.Combine(CommandDir, "command.json");
 
+            var playMode = new EditorPlayMode();
+
             Commands = new Dictionary<string, ICommand> {
                 { "run-tests", new RunTestsCommand() },
                 { "compile", new CompileCommand() },
                 { "refresh", new RefreshCommand() },
                 { "get-status", new GetStatusCommand() },
-                { "get-console-logs", new GetConsoleLogsCommand() }
+                { "get-console-logs", new GetConsoleLogsCommand() },
+                { "play", new PlayCommand(playMode) },
+                { "pause", new PauseCommand(playMode) },
+                { "step", new StepCommand(playMode) }
             };
 
             EnsureDirectoryExists();
