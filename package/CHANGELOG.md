@@ -5,6 +5,20 @@ All notable changes to the Claude Unity Bridge package will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-02-17
+
+### Added
+
+- `play` command - Toggle Play Mode on/off
+- `pause` command - Toggle pause while in Play Mode
+- `step` command - Advance one frame while paused
+- `IEditorPlayMode` interface abstracting `EditorApplication` for testability
+- Full Moq-based test coverage for play/pause/step commands
+
+### Fixed
+
+- Play command response now reports intended play mode state instead of stale pre-transition value
+
 ## [0.2.0] - 2026-02-11
 
 ### Fixed
@@ -139,6 +153,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Editor-only package (no runtime impact)
 - Automatic initialization via `[InitializeOnLoad]`
 
+[0.2.1]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.2.1
 [0.2.0]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.2.0
 [0.1.5]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.5
 [0.1.4]: https://github.com/ManageXR/claude-unity-bridge/releases/tag/v0.1.4
