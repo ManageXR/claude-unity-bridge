@@ -118,13 +118,25 @@ namespace MXR.ClaudeBridge.Tests.Commands {
         }
 
         [Test]
-        public void Execute_EditorStatusReflectsPlayingState() {
-            _mockEditor.SetupProperty(m => m.IsPlaying, false);
-            _mockEditor.SetupGet(m => m.IsPaused).Returns(true);
+        public void Execute_WhenEnteringPlayMode_EditorStatusShowsPlaying() {
+            _mockEditor.SetupGet(m => m.IsPlaying).Returns(false);
 
             _command.Execute(Request, Responses.OnProgress, Responses.OnComplete);
 
-            Assert.That(Responses.CompleteResponse.editorStatus.isPaused, Is.True);
+            Assert.That(Responses.CompleteResponse.editorStatus.isPlaying, Is.True,
+                "Should report intended state (playing) even if editor hasn't transitioned yet");
+        }
+
+        [Test]
+        public void Execute_WhenExitingPlayMode_EditorStatusShowsStopped() {
+            _mockEditor.SetupGet(m => m.IsPlaying).Returns(true);
+
+            _command.Execute(Request, Responses.OnProgress, Responses.OnComplete);
+
+            Assert.That(Responses.CompleteResponse.editorStatus.isPlaying, Is.False,
+                "Should report intended state (stopped) even if editor hasn't transitioned yet");
+            Assert.That(Responses.CompleteResponse.editorStatus.isPaused, Is.False,
+                "Should clear paused state when exiting play mode");
         }
     }
 }

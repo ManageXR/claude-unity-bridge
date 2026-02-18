@@ -16,19 +16,20 @@ namespace MXR.ClaudeBridge.Commands {
             var stopwatch = Stopwatch.StartNew();
 
             try {
-                _editor.IsPlaying = !_editor.IsPlaying;
+                bool willPlay = !_editor.IsPlaying;
+                _editor.IsPlaying = willPlay;
                 stopwatch.Stop();
 
 #if DEBUG
-                Debug.Log($"[ClaudeBridge] Play mode toggled: isPlaying={_editor.IsPlaying}");
+                Debug.Log($"[ClaudeBridge] Play mode toggled: isPlaying={willPlay}");
 #endif
 
                 var response = CommandResponse.Success(request.id, request.action, stopwatch.ElapsedMilliseconds);
                 response.editorStatus = new EditorStatus {
                     isCompiling = _editor.IsCompiling,
                     isUpdating = _editor.IsUpdating,
-                    isPlaying = _editor.IsPlaying,
-                    isPaused = _editor.IsPaused
+                    isPlaying = willPlay,
+                    isPaused = willPlay ? _editor.IsPaused : false
                 };
                 onComplete?.Invoke(response);
             }
