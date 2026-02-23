@@ -14,6 +14,7 @@ namespace MXR.ClaudeBridge.Models {
         public string error;
         public List<ConsoleLogEntry> consoleLogs;
         public EditorStatus editorStatus;
+        public BuildInfo buildInfo;
 
         public static CommandResponse Running(string id, string action) {
             return new CommandResponse {
@@ -88,5 +89,16 @@ namespace MXR.ClaudeBridge.Models {
         public bool isUpdating;
         public bool isPlaying;
         public bool isPaused;
+    }
+
+    [Serializable]
+    public class BuildInfo {
+        public string buildResult;     // "Succeeded", "Failed", "Cancelled", "Unknown"
+        public int totalErrors;
+        public int totalWarnings;
+        public float totalSeconds;     // Build duration from BuildReport
+        public string outputPath;
+        public long sizeBytes;         // Total build size
+        public string method;          // "direct" or the invoked method name
     }
 }
