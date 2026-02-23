@@ -274,6 +274,8 @@ def format_response(response: Dict[str, Any], action: str) -> str:
         return format_refresh_results(response, status, duration_sec)
     elif action in ("play", "pause", "step"):
         return format_play_mode_result(response, status, duration_sec)
+    elif action == "build":
+        return format_build_results(response, status, duration_sec)
     else:
         # Generic formatting
         return format_generic_response(response, status, duration_sec)
@@ -436,6 +438,57 @@ def format_play_mode_result(response: Dict[str, Any], status: str, duration: flo
         return f"✗ {action} failed: {error}\nDuration: {duration:.2f}s"
     else:
         return format_generic_response(response, status, duration)
+
+
+def format_build_results(response: Dict[str, Any], status: str, duration: float) -> str:
+    """Format build response"""
+    build_info = response.get("buildInfo", {})
+    build_result = build_info.get("buildResult", "Succeeded" if status == "success" else "Failed")
+    method = build_info.get("method", "")
+    total_errors = build_info.get("totalErrors", 0)
+    total_warnings = build_info.get("totalWarnings", 0)
+    total_seconds = build_info.get("totalSeconds", 0)
+    output_path = build_info.get("outputPath", "")
+    size_bytes = build_info.get("sizeBytes", 0)
+
+    indicator = "✓" if build_result == "Succeeded" else "✗"
+    lines = [f"{indicator} Build {build_result}"]
+
+    if method and method != "direct":
+        lines.append(f"Method: {method}")
+
+    lines.append(f"Errors: {total_errors}")
+    lines.append(f"Warnings: {total_warnings}")
+
+    if total_seconds > 0:
+        lines.append(f"Build Time: {total_seconds:.1f}s")
+
+    if output_path:
+        lines.append(f"Output: {output_path}")
+
+    if size_bytes > 0:
+        lines.append(f"Size: {_format_bytes(size_bytes)}")
+
+    lines.append(f"Duration: {duration:.2f}s")
+
+    if status == "failure":
+        error_msg = response.get("error", "")
+        if error_msg:
+            lines.append(f"\n{error_msg}")
+
+    return "\n".join(lines)
+
+
+def _format_bytes(size_bytes: int) -> str:
+    """Format byte count as human-readable string."""
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    elif size_bytes < 1024 * 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+    else:
+        return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
 
 
 def format_generic_response(response: Dict[str, Any], status: str, duration: float) -> str:

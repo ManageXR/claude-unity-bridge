@@ -20,6 +20,7 @@ from claude_unity_bridge.cli import (
     format_editor_status,
     format_refresh_results,
     format_play_mode_result,
+    format_build_results,
     format_generic_response,
     write_command,
     wait_for_response,
@@ -339,6 +340,99 @@ class TestFormatPlayModeResult:
 
         # Should fall through to generic formatting
         assert "play completed successfully" in result
+
+
+class TestFormatBuildResults:
+    """Test formatting of build results"""
+
+    def test_direct_build_success(self):
+        response = {
+            "status": "success",
+            "buildInfo": {
+                "buildResult": "Succeeded",
+                "totalErrors": 0,
+                "totalWarnings": 3,
+                "totalSeconds": 45.2,
+                "outputPath": "/path/to/Build_Android.apk",
+                "sizeBytes": 123456789,
+                "method": "direct",
+            },
+        }
+        result = format_build_results(response, "success", 45.5)
+
+        assert "Build Succeeded" in result
+        assert "Errors: 0" in result
+        assert "Warnings: 3" in result
+        assert "Build Time: 45.2s" in result
+        assert "Output: /path/to/Build_Android.apk" in result
+        assert "Size:" in result
+        assert "Duration: 45.50s" in result
+
+    def test_method_build_success(self):
+        response = {
+            "status": "success",
+            "buildInfo": {
+                "buildResult": "Succeeded",
+                "totalErrors": 0,
+                "totalWarnings": 0,
+                "totalSeconds": 120.5,
+                "outputPath": "",
+                "sizeBytes": 0,
+                "method": "MXR.Builder.BuildEntryPoints.BuildQuest",
+            },
+        }
+        result = format_build_results(response, "success", 121.0)
+
+        assert "Build Succeeded" in result
+        assert "Method: MXR.Builder.BuildEntryPoints.BuildQuest" in result
+        assert "Build Time: 120.5s" in result
+
+    def test_build_failure(self):
+        response = {
+            "status": "failure",
+            "error": "Build Failed: 5 error(s), 2 warning(s)",
+            "buildInfo": {
+                "buildResult": "Failed",
+                "totalErrors": 5,
+                "totalWarnings": 2,
+                "totalSeconds": 30.0,
+                "outputPath": "",
+                "sizeBytes": 0,
+                "method": "direct",
+            },
+        }
+        result = format_build_results(response, "failure", 30.5)
+
+        assert "Build Failed" in result
+        assert "Errors: 5" in result
+        assert "Warnings: 2" in result
+
+    def test_build_no_build_info(self):
+        """Falls back to generic format when buildInfo is missing"""
+        response = {
+            "status": "success",
+        }
+        result = format_build_results(response, "success", 10.0)
+
+        assert "Build Succeeded" in result
+        assert "Duration: 10.00s" in result
+
+    def test_build_size_formatting(self):
+        response = {
+            "status": "success",
+            "buildInfo": {
+                "buildResult": "Succeeded",
+                "totalErrors": 0,
+                "totalWarnings": 0,
+                "totalSeconds": 10.0,
+                "outputPath": "/path/to/build",
+                "sizeBytes": 52428800,
+                "method": "direct",
+            },
+        }
+        result = format_build_results(response, "success", 10.0)
+
+        assert "50.0 MB" in result
 
 
 class TestFormatResponse:
