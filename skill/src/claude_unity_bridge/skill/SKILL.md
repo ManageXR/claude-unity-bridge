@@ -23,7 +23,7 @@ The Unity Bridge enables Claude Code to trigger operations in a running Unity Ed
 ## Requirements
 
 1. **Unity Package:** Install `com.mxr.claude-bridge` in your Unity project
-   - Via Package Manager: `https://github.com/ManageXR/claude-unity-bridge.git`
+   - Via Package Manager: `https://github.com/ManageXR/claude-unity-bridge.git?path=package`
    - See main package README for installation instructions
 
 2. **Unity Editor:** Must be open with your project loaded
