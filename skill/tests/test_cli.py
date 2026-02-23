@@ -36,6 +36,7 @@ from claude_unity_bridge.cli import (
     get_skill_source_dir,
     get_skill_target_dir,
     get_claude_skills_dir,
+    load_build_config,
     _validate_command_id,
     main,
     UnityCommandError,
@@ -433,6 +434,68 @@ class TestFormatBuildResults:
         result = format_build_results(response, "success", 10.0)
 
         assert "50.0 MB" in result
+
+
+class TestLoadBuildConfig:
+    """Test loading optional build profiles from .unity-bridge/build.json"""
+
+    def test_load_valid_config(self, tmp_path):
+        config = {
+            "profiles": {
+                "quest": {
+                    "method": "MXR.Builder.BuildEntryPoints.BuildQuest",
+                    "env": {"BUILD_TYPE": "development"},
+                    "timeout": 600,
+                },
+                "pico": {
+                    "method": "MXR.Builder.BuildEntryPoints.BuildPico",
+                },
+            },
+            "default": "quest",
+        }
+        config_file = tmp_path / ".unity-bridge" / "build.json"
+        config_file.parent.mkdir(parents=True, exist_ok=True)
+        config_file.write_text(json.dumps(config))
+
+        result = load_build_config(tmp_path / ".unity-bridge")
+        assert result is not None
+        assert "quest" in result["profiles"]
+        assert result["profiles"]["quest"]["method"] == "MXR.Builder.BuildEntryPoints.BuildQuest"
+        assert result["default"] == "quest"
+
+    def test_load_missing_config_returns_none(self, tmp_path):
+        result = load_build_config(tmp_path / ".unity-bridge")
+        assert result is None
+
+    def test_load_invalid_json_returns_none(self, tmp_path):
+        config_file = tmp_path / ".unity-bridge" / "build.json"
+        config_file.parent.mkdir(parents=True, exist_ok=True)
+        config_file.write_text("not valid json{{{")
+
+        result = load_build_config(tmp_path / ".unity-bridge")
+        assert result is None
+
+    def test_resolve_profile(self, tmp_path):
+        config = {
+            "profiles": {
+                "quest": {
+                    "method": "MXR.Builder.BuildEntryPoints.BuildQuest",
+                    "env": {"BUILD_TYPE": "development", "SCRIPTING_BACKEND": "il2cpp"},
+                    "timeout": 600,
+                },
+            },
+        }
+        config_file = tmp_path / ".unity-bridge" / "build.json"
+        config_file.parent.mkdir(parents=True, exist_ok=True)
+        config_file.write_text(json.dumps(config))
+
+        build_config = load_build_config(tmp_path / ".unity-bridge")
+        profile = build_config["profiles"]["quest"]
+
+        assert profile["method"] == "MXR.Builder.BuildEntryPoints.BuildQuest"
+        assert profile["env"]["BUILD_TYPE"] == "development"
+        assert profile["env"]["SCRIPTING_BACKEND"] == "il2cpp"
+        assert profile["timeout"] == 600
 
 
 class TestFormatResponse:

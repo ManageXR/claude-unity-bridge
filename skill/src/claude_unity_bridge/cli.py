@@ -30,6 +30,27 @@ SLEEP_MULTIPLIER = 1.5
 MIN_LIMIT = 1
 MAX_LIMIT = 1000
 
+
+def load_build_config(unity_bridge_dir: Path) -> Optional[Dict[str, Any]]:
+    """
+    Load optional build configuration from .unity-bridge/build.json.
+
+    Args:
+        unity_bridge_dir: Path to the .unity-bridge directory
+
+    Returns:
+        Parsed config dict, or None if file doesn't exist or is invalid.
+    """
+    config_file = unity_bridge_dir / "build.json"
+    if not config_file.exists():
+        return None
+
+    try:
+        return json.loads(config_file.read_text())
+    except (json.JSONDecodeError, Exception):
+        return None
+
+
 # Exit codes
 EXIT_SUCCESS = 0
 EXIT_ERROR = 1
