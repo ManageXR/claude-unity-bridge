@@ -18,6 +18,7 @@ The Unity Bridge enables Claude Code to trigger operations in a running Unity Ed
 - Check editor status (compilation, play mode, etc.)
 - Retrieve Unity console logs
 - Control Play Mode (play, pause, step)
+- Build projects (direct or custom pipeline)
 
 **Multi-Project Support:** Each Unity project has its own `.unity-bridge/` directory, allowing multiple projects to be worked on simultaneously.
 
@@ -226,6 +227,86 @@ Duration: 0.02s
 - `pause` and `step` require Play Mode to be active; returns error if not playing
 - All three return the resulting `editorStatus` so the caller knows the current state
 
+#### Build Project
+
+Build the Unity project using either direct `BuildPipeline.BuildPlayer()` or a custom build method:
+
+```bash
+# Direct build with current active target
+unity-bridge build
+
+# Direct build for specific target
+unity-bridge build --target Android --development
+
+# Custom build pipeline via static method invocation
+unity-bridge build --method MXR.Builder.BuildEntryPoints.BuildQuest
+
+# With environment variables
+unity-bridge build --method MXR.Builder.BuildEntryPoints.BuildQuest --env BUILD_TYPE=production --env SCRIPTING_BACKEND=il2cpp
+
+# Using a named build profile (from .unity-bridge/build.json)
+unity-bridge build --profile quest
+```
+
+**Output (Success):**
+```
+✓ Build Succeeded
+Errors: 0
+Warnings: 3
+Build Time: 45.2s
+Output: /path/to/Build_Android.apk
+Size: 50.0 MB
+Duration: 45.50s
+```
+
+**Output (Failure):**
+```
+✗ Build Failed
+Errors: 5
+Warnings: 2
+Build Time: 30.0s
+Duration: 30.50s
+
+Build Failed: 5 error(s), 2 warning(s)
+```
+
+**Parameters:**
+- `--method` - Fully qualified static method (e.g., `MXR.Builder.BuildEntryPoints.BuildQuest`)
+- `--target` - BuildTarget enum name (e.g., `Android`, `StandaloneWindows64`, `iOS`)
+- `--development` - Enable development build flag
+- `--env` - Environment variable `KEY=VALUE` (repeatable)
+- `--profile` - Named profile from `.unity-bridge/build.json`
+- `--output` - Override output path
+- `--timeout` - Override default 300s timeout
+
+**Build Profiles:**
+
+For projects with custom build pipelines, create `.unity-bridge/build.json` to define named profiles:
+
+```json
+{
+  "profiles": {
+    "quest": {
+      "method": "MXR.Builder.BuildEntryPoints.BuildQuest",
+      "env": { "BUILD_TYPE": "development" },
+      "timeout": 600
+    },
+    "pico": {
+      "method": "MXR.Builder.BuildEntryPoints.BuildPico"
+    }
+  },
+  "default": "quest"
+}
+```
+
+Claude can help create this file by scanning your project for build entry points. Ask: "Set up build profiles for my project."
+
+**Notes:**
+- Default timeout is 5 minutes (300s) — builds are long-running operations
+- The bridge sets `UNITY_BRIDGE_BUILD=true` env var before method invocation, so build code can detect bridge context and skip `EditorApplication.Exit()` calls
+- Direct builds use the currently active build target if `--target` is not specified
+- Profile settings are defaults; CLI arguments override them
+
 ### Advanced Options
 
 #### Timeout Configuration
@@ -300,6 +381,9 @@ When you're working in a Unity project directory, you can ask Claude Code to per
 - "Enter Play Mode"
 - "Pause the editor"
 - "Step one frame"
+- "Build for Android"
+- "Run the Quest build"
+- "Set up build profiles for my project"
 
 Claude Code will automatically use this skill to execute the commands via the Python script.
 

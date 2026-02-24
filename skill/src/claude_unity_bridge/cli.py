@@ -29,6 +29,28 @@ MAX_SLEEP = 1.0
 SLEEP_MULTIPLIER = 1.5
 MIN_LIMIT = 1
 MAX_LIMIT = 1000
+BUILD_DEFAULT_TIMEOUT = 300  # 5 minutes default for builds
+
+
+def load_build_config(unity_bridge_dir: Path) -> Optional[Dict[str, Any]]:
+    """
+    Load optional build configuration from .unity-bridge/build.json.
+
+    Args:
+        unity_bridge_dir: Path to the .unity-bridge directory
+
+    Returns:
+        Parsed config dict, or None if file doesn't exist or is invalid.
+    """
+    config_file = unity_bridge_dir / "build.json"
+    if not config_file.exists():
+        return None
+
+    try:
+        return json.loads(config_file.read_text())
+    except (json.JSONDecodeError, Exception):
+        return None
+
 
 # Exit codes
 EXIT_SUCCESS = 0
@@ -274,6 +296,8 @@ def format_response(response: Dict[str, Any], action: str) -> str:
         return format_refresh_results(response, status, duration_sec)
     elif action in ("play", "pause", "step"):
         return format_play_mode_result(response, status, duration_sec)
+    elif action == "build":
+        return format_build_results(response, status, duration_sec)
     else:
         # Generic formatting
         return format_generic_response(response, status, duration_sec)
@@ -436,6 +460,57 @@ def format_play_mode_result(response: Dict[str, Any], status: str, duration: flo
         return f"✗ {action} failed: {error}\nDuration: {duration:.2f}s"
     else:
         return format_generic_response(response, status, duration)
+
+
+def format_build_results(response: Dict[str, Any], status: str, duration: float) -> str:
+    """Format build response"""
+    build_info = response.get("buildInfo", {})
+    build_result = build_info.get("buildResult", "Succeeded" if status == "success" else "Failed")
+    method = build_info.get("method", "")
+    total_errors = build_info.get("totalErrors", 0)
+    total_warnings = build_info.get("totalWarnings", 0)
+    total_seconds = build_info.get("totalSeconds", 0)
+    output_path = build_info.get("outputPath", "")
+    size_bytes = build_info.get("sizeBytes", 0)
+
+    indicator = "✓" if build_result == "Succeeded" else "✗"
+    lines = [f"{indicator} Build {build_result}"]
+
+    if method and method != "direct":
+        lines.append(f"Method: {method}")
+
+    lines.append(f"Errors: {total_errors}")
+    lines.append(f"Warnings: {total_warnings}")
+
+    if total_seconds > 0:
+        lines.append(f"Build Time: {total_seconds:.1f}s")
+
+    if output_path:
+        lines.append(f"Output: {output_path}")
+
+    if size_bytes > 0:
+        lines.append(f"Size: {_format_bytes(size_bytes)}")
+
+    lines.append(f"Duration: {duration:.2f}s")
+
+    if status == "failure":
+        error_msg = response.get("error", "")
+        if error_msg:
+            lines.append(f"\n{error_msg}")
+
+    return "\n".join(lines)
+
+
+def _format_bytes(size_bytes: int) -> str:
+    """Format byte count as human-readable string."""
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    elif size_bytes < 1024 * 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+    else:
+        return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
 
 
 def format_generic_response(response: Dict[str, Any], status: str, duration: float) -> str:
@@ -882,6 +957,7 @@ Unity Commands:
   play               Toggle Play Mode (enter/exit)
   pause              Toggle pause (while in Play Mode)
   step               Step one frame (while in Play Mode)
+  build              Build project (direct or custom method)
   health-check       Verify Unity Bridge setup
 
 Skill Commands:
@@ -898,6 +974,10 @@ Examples:
   %(prog)s play
   %(prog)s pause
   %(prog)s step
+  %(prog)s build
+  %(prog)s build --target Android --development
+  %(prog)s build --method MXR.Builder.BuildEntryPoints.BuildQuest
+  %(prog)s build --profile quest
   %(prog)s health-check
   %(prog)s install-skill
         """,
@@ -914,6 +994,7 @@ Examples:
             "play",
             "pause",
             "step",
+            "build",
             "health-check",
             "install-skill",
             "uninstall-skill",
@@ -936,6 +1017,34 @@ Examples:
         "--limit",
         type=int,
         help="Maximum number of logs to retrieve (for get-console-logs)",
+    )
+
+    # Build command options
+    parser.add_argument(
+        "--method",
+        help="Fully qualified static method to invoke (for build)",
+    )
+    parser.add_argument(
+        "--target",
+        help="Build target (for build). E.g., 'Android', 'StandaloneWindows64'",
+    )
+    parser.add_argument(
+        "--development",
+        action="store_true",
+        help="Enable development build (for build)",
+    )
+    parser.add_argument(
+        "--env",
+        action="append",
+        help="Environment variable KEY=VALUE (for build, repeatable)",
+    )
+    parser.add_argument(
+        "--profile",
+        help="Build profile name from .unity-bridge/build.json (for build)",
+    )
+    parser.add_argument(
+        "--output",
+        help="Build output path override (for build)",
     )
 
     # General options
@@ -992,6 +1101,58 @@ Examples:
             params["limit"] = str(args.limit)
         if args.filter:
             params["filter"] = args.filter
+
+    elif args.command == "build":
+        # Override default timeout for builds
+        if args.timeout == DEFAULT_TIMEOUT:
+            args.timeout = BUILD_DEFAULT_TIMEOUT
+
+        # Resolve profile if specified
+        if args.profile:
+            build_config = load_build_config(UNITY_DIR)
+            if build_config is None:
+                print(
+                    f"Error: Build profile '{args.profile}' requested but "
+                    f"no .unity-bridge/build.json found.",
+                    file=sys.stderr,
+                )
+                return EXIT_ERROR
+
+            profiles = build_config.get("profiles", {})
+            if args.profile not in profiles:
+                available = ", ".join(profiles.keys()) if profiles else "none"
+                print(
+                    f"Error: Build profile '{args.profile}' not found. "
+                    f"Available profiles: {available}",
+                    file=sys.stderr,
+                )
+                return EXIT_ERROR
+
+            profile = profiles[args.profile]
+            # Profile provides defaults; CLI args override
+            if not args.method and "method" in profile:
+                params["method"] = profile["method"]
+            if "env" in profile and isinstance(profile["env"], dict):
+                env_pairs = [f"{k}={v}" for k, v in profile["env"].items()]
+                # Merge with any --env args
+                if args.env:
+                    env_pairs.extend(args.env)
+                params["env"] = ";".join(env_pairs)
+            if "timeout" in profile and args.timeout == BUILD_DEFAULT_TIMEOUT:
+                args.timeout = profile["timeout"]
+
+        # Apply direct CLI args (override profile)
+        if args.method:
+            params["method"] = args.method
+        if args.target:
+            params["target"] = args.target
+        if args.development:
+            params["development"] = "true"
+        if args.output:
+            params["output"] = args.output
+        # Handle --env args when no profile or profile didn't set env
+        if args.env and "env" not in params:
+            params["env"] = ";".join(args.env)
 
     # Execute command
     try:

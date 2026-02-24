@@ -44,7 +44,8 @@ namespace MXR.ClaudeBridge {
                 { "get-console-logs", new GetConsoleLogsCommand() },
                 { "play", new PlayCommand(playMode) },
                 { "pause", new PauseCommand(playMode) },
-                { "step", new StepCommand(playMode) }
+                { "step", new StepCommand(playMode) },
+                { "build", new BuildCommand() }
             };
 
             EnsureDirectoryExists();
