@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "claude-unity-bridge"
-version = "0.2.1"
+version = "0.2.2"
 description = "Control Unity Editor from Claude Code"
 readme = "SKILL.md"
 license = {text = "Apache-2.0"}
