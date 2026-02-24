@@ -29,6 +29,7 @@ MAX_SLEEP = 1.0
 SLEEP_MULTIPLIER = 1.5
 MIN_LIMIT = 1
 MAX_LIMIT = 1000
+BUILD_DEFAULT_TIMEOUT = 300  # 5 minutes default for builds
 
 
 def load_build_config(unity_bridge_dir: Path) -> Optional[Dict[str, Any]]:
@@ -956,6 +957,7 @@ Unity Commands:
   play               Toggle Play Mode (enter/exit)
   pause              Toggle pause (while in Play Mode)
   step               Step one frame (while in Play Mode)
+  build              Build project (direct or custom method)
   health-check       Verify Unity Bridge setup
 
 Skill Commands:
@@ -972,6 +974,10 @@ Examples:
   %(prog)s play
   %(prog)s pause
   %(prog)s step
+  %(prog)s build
+  %(prog)s build --target Android --development
+  %(prog)s build --method MXR.Builder.BuildEntryPoints.BuildQuest
+  %(prog)s build --profile quest
   %(prog)s health-check
   %(prog)s install-skill
         """,
@@ -988,6 +994,7 @@ Examples:
             "play",
             "pause",
             "step",
+            "build",
             "health-check",
             "install-skill",
             "uninstall-skill",
@@ -1010,6 +1017,34 @@ Examples:
         "--limit",
         type=int,
         help="Maximum number of logs to retrieve (for get-console-logs)",
+    )
+
+    # Build command options
+    parser.add_argument(
+        "--method",
+        help="Fully qualified static method to invoke (for build)",
+    )
+    parser.add_argument(
+        "--target",
+        help="Build target (for build). E.g., 'Android', 'StandaloneWindows64'",
+    )
+    parser.add_argument(
+        "--development",
+        action="store_true",
+        help="Enable development build (for build)",
+    )
+    parser.add_argument(
+        "--env",
+        action="append",
+        help="Environment variable KEY=VALUE (for build, repeatable)",
+    )
+    parser.add_argument(
+        "--profile",
+        help="Build profile name from .unity-bridge/build.json (for build)",
+    )
+    parser.add_argument(
+        "--output",
+        help="Build output path override (for build)",
     )
 
     # General options
@@ -1066,6 +1101,58 @@ Examples:
             params["limit"] = str(args.limit)
         if args.filter:
             params["filter"] = args.filter
+
+    elif args.command == "build":
+        # Override default timeout for builds
+        if args.timeout == DEFAULT_TIMEOUT:
+            args.timeout = BUILD_DEFAULT_TIMEOUT
+
+        # Resolve profile if specified
+        if args.profile:
+            build_config = load_build_config(UNITY_DIR)
+            if build_config is None:
+                print(
+                    f"Error: Build profile '{args.profile}' requested but "
+                    f"no .unity-bridge/build.json found.",
+                    file=sys.stderr,
+                )
+                return EXIT_ERROR
+
+            profiles = build_config.get("profiles", {})
+            if args.profile not in profiles:
+                available = ", ".join(profiles.keys()) if profiles else "none"
+                print(
+                    f"Error: Build profile '{args.profile}' not found. "
+                    f"Available profiles: {available}",
+                    file=sys.stderr,
+                )
+                return EXIT_ERROR
+
+            profile = profiles[args.profile]
+            # Profile provides defaults; CLI args override
+            if not args.method and "method" in profile:
+                params["method"] = profile["method"]
+            if "env" in profile and isinstance(profile["env"], dict):
+                env_pairs = [f"{k}={v}" for k, v in profile["env"].items()]
+                # Merge with any --env args
+                if args.env:
+                    env_pairs.extend(args.env)
+                params["env"] = ";".join(env_pairs)
+            if "timeout" in profile and args.timeout == BUILD_DEFAULT_TIMEOUT:
+                args.timeout = profile["timeout"]
+
+        # Apply direct CLI args (override profile)
+        if args.method:
+            params["method"] = args.method
+        if args.target:
+            params["target"] = args.target
+        if args.development:
+            params["development"] = "true"
+        if args.output:
+            params["output"] = args.output
+        # Handle --env args when no profile or profile didn't set env
+        if args.env and "env" not in params:
+            params["env"] = ";".join(args.env)
 
     # Execute command
     try:

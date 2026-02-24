@@ -42,6 +42,7 @@ from claude_unity_bridge.cli import (
     UnityCommandError,
     CommandTimeoutError,
     UnityNotRunningError,
+    BUILD_DEFAULT_TIMEOUT,
     EXIT_SUCCESS,
     EXIT_ERROR,
     EXIT_TIMEOUT,
@@ -2538,6 +2539,221 @@ class TestResponseCleanupOnError:
                         execute_command("compile", {}, timeout=5)
 
                     # Should not raise — cleanup_response_file handles missing files
+
+
+class TestMainBuildCommand:
+    """Test main() with build command"""
+
+    def test_build_default_timeout_value(self):
+        """BUILD_DEFAULT_TIMEOUT should be 300 seconds (5 minutes)"""
+        assert BUILD_DEFAULT_TIMEOUT == 300
+
+    def test_main_build_direct(self, tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            argv = ["unity-bridge", "build", "--target", "Android", "--timeout", "1"]
+            with patch("sys.argv", argv):
+
+                def mock_write(action, params):
+                    assert action == "build"
+                    assert params.get("target") == "Android"
+                    command_id = "a1b2c3d4-e5f6-7890-abcd-ef0123456789"
+                    response_file = tmp_path / f"response-{command_id}.json"
+                    response_file.write_text(
+                        json.dumps(
+                            {
+                                "id": command_id,
+                                "status": "success",
+                                "action": "build",
+                                "duration_ms": 45000,
+                                "buildInfo": {
+                                    "buildResult": "Succeeded",
+                                    "totalErrors": 0,
+                                    "totalWarnings": 0,
+                                    "totalSeconds": 45.0,
+                                    "outputPath": "/path/to/build.apk",
+                                    "sizeBytes": 50000000,
+                                    "method": "direct",
+                                },
+                            }
+                        )
+                    )
+                    return command_id
+
+                with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write):
+                    exit_code = main()
+                    assert exit_code == EXIT_SUCCESS
+
+    def test_main_build_with_method(self, tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            argv = [
+                "unity-bridge",
+                "build",
+                "--method",
+                "MXR.Builder.BuildEntryPoints.BuildQuest",
+                "--timeout",
+                "1",
+            ]
+            with patch("sys.argv", argv):
+
+                def mock_write(action, params):
+                    assert action == "build"
+                    assert params["method"] == "MXR.Builder.BuildEntryPoints.BuildQuest"
+                    command_id = "b2c3d4e5-f6a7-8901-bcde-f01234567890"
+                    response_file = tmp_path / f"response-{command_id}.json"
+                    response_file.write_text(
+                        json.dumps(
+                            {
+                                "id": command_id,
+                                "status": "success",
+                                "action": "build",
+                                "duration_ms": 120000,
+                                "buildInfo": {
+                                    "buildResult": "Succeeded",
+                                    "totalErrors": 0,
+                                    "totalWarnings": 0,
+                                    "totalSeconds": 120.0,
+                                    "outputPath": "",
+                                    "sizeBytes": 0,
+                                    "method": "MXR.Builder.BuildEntryPoints.BuildQuest",
+                                },
+                            }
+                        )
+                    )
+                    return command_id
+
+                with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write):
+                    exit_code = main()
+                    assert exit_code == EXIT_SUCCESS
+
+    def test_main_build_with_env(self, tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            argv = [
+                "unity-bridge",
+                "build",
+                "--method",
+                "MXR.Builder.BuildEntryPoints.BuildQuest",
+                "--env",
+                "BUILD_TYPE=production",
+                "--env",
+                "SCRIPTING_BACKEND=il2cpp",
+                "--timeout",
+                "1",
+            ]
+            with patch("sys.argv", argv):
+
+                def mock_write(action, params):
+                    assert params["method"] == "MXR.Builder.BuildEntryPoints.BuildQuest"
+                    assert "BUILD_TYPE=production" in params["env"]
+                    assert "SCRIPTING_BACKEND=il2cpp" in params["env"]
+                    command_id = "c3d4e5f6-a7b8-9012-cdef-012345678901"
+                    response_file = tmp_path / f"response-{command_id}.json"
+                    response_file.write_text(
+                        json.dumps(
+                            {
+                                "id": command_id,
+                                "status": "success",
+                                "action": "build",
+                                "duration_ms": 100,
+                            }
+                        )
+                    )
+                    return command_id
+
+                with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write):
+                    exit_code = main()
+                    assert exit_code == EXIT_SUCCESS
+
+    def test_main_build_with_profile(self, tmp_path):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            # Create build.json with profile
+            config = {
+                "profiles": {
+                    "quest": {
+                        "method": "MXR.Builder.BuildEntryPoints.BuildQuest",
+                        "env": {"BUILD_TYPE": "development"},
+                        "timeout": 600,
+                    },
+                },
+            }
+            build_config = tmp_path / "build.json"
+            build_config.write_text(json.dumps(config))
+
+            argv = ["unity-bridge", "build", "--profile", "quest", "--timeout", "1"]
+            with patch("sys.argv", argv):
+
+                def mock_write(action, params):
+                    assert params["method"] == "MXR.Builder.BuildEntryPoints.BuildQuest"
+                    assert "BUILD_TYPE=development" in params["env"]
+                    command_id = "d4e5f6a7-b8c9-0123-defa-123456789012"
+                    response_file = tmp_path / f"response-{command_id}.json"
+                    response_file.write_text(
+                        json.dumps(
+                            {
+                                "id": command_id,
+                                "status": "success",
+                                "action": "build",
+                                "duration_ms": 100,
+                            }
+                        )
+                    )
+                    return command_id
+
+                with patch("claude_unity_bridge.cli.write_command", side_effect=mock_write):
+                    exit_code = main()
+                    assert exit_code == EXIT_SUCCESS
+
+    def test_main_build_unknown_profile(self, tmp_path, capsys):
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            # Create build.json without the requested profile
+            config = {"profiles": {"quest": {"method": "SomeMethod"}}}
+            build_config = tmp_path / "build.json"
+            build_config.write_text(json.dumps(config))
+
+            argv = ["unity-bridge", "build", "--profile", "nonexistent", "--timeout", "1"]
+            with patch("sys.argv", argv):
+                exit_code = main()
+                assert exit_code == EXIT_ERROR
+
+            captured = capsys.readouterr()
+            assert "not found" in captured.err.lower() or "not found" in captured.out.lower()
+
+    def test_main_build_profile_missing_config(self, tmp_path, capsys):
+        """Error when --profile used but no build.json exists"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            # No build.json created in tmp_path
+            argv = ["unity-bridge", "build", "--profile", "quest", "--timeout", "1"]
+            with patch("sys.argv", argv):
+                exit_code = main()
+                assert exit_code == EXIT_ERROR
+
+            captured = capsys.readouterr()
+            assert "build.json" in captured.err.lower()
+
+    def test_main_build_profile_timeout_override(self, tmp_path):
+        """Profile timeout is applied when user doesn't specify --timeout"""
+        with patch("claude_unity_bridge.cli.UNITY_DIR", tmp_path):
+            config = {
+                "profiles": {
+                    "quest": {
+                        "method": "MXR.Builder.BuildEntryPoints.BuildQuest",
+                        "timeout": 600,
+                    },
+                },
+            }
+            build_config = tmp_path / "build.json"
+            build_config.write_text(json.dumps(config))
+
+            # Note: NO --timeout argument, so default should be overridden by profile
+            argv = ["unity-bridge", "build", "--profile", "quest"]
+            with patch("sys.argv", argv):
+
+                def mock_execute(action, params, timeout, cleanup=False, verbose=False):
+                    assert timeout == 600, f"Expected profile timeout 600, got {timeout}"
+                    return "✓ Build Succeeded\nDuration: 1.00s"
+
+                with patch("claude_unity_bridge.cli.execute_command", side_effect=mock_execute):
+                    exit_code = main()
+                    assert exit_code == EXIT_SUCCESS
 
 
 if __name__ == "__main__":
