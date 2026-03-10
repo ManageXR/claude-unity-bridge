@@ -12,12 +12,6 @@ using Debug = UnityEngine.Debug;
 namespace MXR.ClaudeBridge.Commands {
     public class BuildCommand : ICommand {
 
-        // Set before method invocation so build code can detect bridge context
-        private const string BridgeBuildEnvVar = "UNITY_BRIDGE_BUILD";
-
-        private bool _exitRequested;
-        private int _exitCode;
-
         public void Execute(
             CommandRequest request,
             Action<CommandResponse> onProgress,
@@ -134,7 +128,6 @@ namespace MXR.ClaudeBridge.Commands {
             Action<CommandResponse> onComplete
         ) {
             var methodPath = request.@params?.method;
-            var envString = request.@params?.env;
 
             // Parse method path: "Namespace.Class.Method"
             var lastDot = methodPath.LastIndexOf('.');
@@ -173,29 +166,6 @@ namespace MXR.ClaudeBridge.Commands {
                 return;
             }
 
-            // Set environment variables
-            var envVars = new Dictionary<string, string>();
-            Environment.SetEnvironmentVariable(BridgeBuildEnvVar, "true");
-            envVars[BridgeBuildEnvVar] = "true";
-
-            if (!string.IsNullOrEmpty(envString)) {
-                foreach (var pair in envString.Split(';')) {
-                    var trimmed = pair.Trim();
-                    if (string.IsNullOrEmpty(trimmed)) continue;
-                    var eqIdx = trimmed.IndexOf('=');
-                    if (eqIdx <= 0) continue;
-                    var key = trimmed.Substring(0, eqIdx);
-                    var val = trimmed.Substring(eqIdx + 1);
-                    Environment.SetEnvironmentVariable(key, val);
-                    envVars[key] = val;
-                }
-            }
-
-            // Hook wantsToQuit to prevent editor shutdown
-            _exitRequested = false;
-            _exitCode = 0;
-            EditorApplication.wantsToQuit += OnWantsToQuit;
-
             Debug.Log($"[ClaudeBridge] Invoking build method: {methodPath}");
 
             try {
@@ -203,25 +173,13 @@ namespace MXR.ClaudeBridge.Commands {
                 stopwatch.Stop();
 
                 var buildInfo = new BuildInfo {
-                    buildResult = _exitRequested
-                        ? (_exitCode == 0 ? "Succeeded" : "Failed")
-                        : "Succeeded",
+                    buildResult = "Succeeded",
                     totalSeconds = stopwatch.ElapsedMilliseconds / 1000f,
                     method = methodPath
                 };
 
-                CommandResponse response;
-                if (buildInfo.buildResult == "Succeeded") {
-                    Debug.Log($"[ClaudeBridge] Method build succeeded in {buildInfo.totalSeconds:F1}s");
-                    response = CommandResponse.Success(request.id, request.action, stopwatch.ElapsedMilliseconds);
-                } else {
-                    Debug.LogError($"[ClaudeBridge] Method build failed (exit code: {_exitCode})");
-                    response = CommandResponse.Failure(
-                        request.id, request.action, stopwatch.ElapsedMilliseconds,
-                        $"Build method exited with code {_exitCode}"
-                    );
-                }
-
+                Debug.Log($"[ClaudeBridge] Method build completed in {buildInfo.totalSeconds:F1}s");
+                var response = CommandResponse.Success(request.id, request.action, stopwatch.ElapsedMilliseconds);
                 response.buildInfo = buildInfo;
                 onComplete?.Invoke(response);
             }
@@ -241,21 +199,6 @@ namespace MXR.ClaudeBridge.Commands {
                 };
                 onComplete?.Invoke(response);
             }
-            finally {
-                // Cleanup: unhook quit handler, restore env vars
-                EditorApplication.wantsToQuit -= OnWantsToQuit;
-                foreach (var kv in envVars) {
-                    Environment.SetEnvironmentVariable(kv.Key, null);
-                }
-            }
-        }
-
-        private bool OnWantsToQuit() {
-            _exitRequested = true;
-            Debug.LogWarning("[ClaudeBridge] Blocked EditorApplication.Exit() during bridge-invoked build. " +
-                             "Set UNITY_BRIDGE_BUILD env var check in your build code to skip Exit() calls.");
-            // Return false to prevent quitting
-            return false;
         }
 
         private static string[] GetEnabledScenePaths() {
