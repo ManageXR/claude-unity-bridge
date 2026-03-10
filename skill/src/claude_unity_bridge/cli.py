@@ -32,6 +32,26 @@ MAX_LIMIT = 1000
 BUILD_DEFAULT_TIMEOUT = 300  # 5 minutes default for builds
 
 
+def load_build_config(unity_bridge_dir: Path) -> Optional[Dict[str, Any]]:
+    """
+    Load optional build configuration from .unity-bridge/build.json.
+
+    Args:
+        unity_bridge_dir: Path to the .unity-bridge directory
+
+    Returns:
+        Parsed config dict, or None if file doesn't exist or is invalid.
+    """
+    config_file = unity_bridge_dir / "build.json"
+    if not config_file.exists():
+        return None
+
+    try:
+        return json.loads(config_file.read_text())
+    except (json.JSONDecodeError, Exception):
+        return None
+
+
 # Exit codes
 EXIT_SUCCESS = 0
 EXIT_ERROR = 1
@@ -957,6 +977,7 @@ Examples:
   %(prog)s build
   %(prog)s build --target Android --development
   %(prog)s build --method MXR.Builder.BuildEntryPoints.BuildQuest
+  %(prog)s build --profile quest
   %(prog)s health-check
   %(prog)s install-skill
         """,
@@ -1011,6 +1032,15 @@ Examples:
         "--development",
         action="store_true",
         help="Enable development build (for build)",
+    )
+    parser.add_argument(
+        "--env",
+        action="append",
+        help="Environment variable KEY=VALUE (for build, repeatable)",
+    )
+    parser.add_argument(
+        "--profile",
+        help="Build profile name from .unity-bridge/build.json (for build)",
     )
     parser.add_argument(
         "--output",
@@ -1077,7 +1107,41 @@ Examples:
         if args.timeout == DEFAULT_TIMEOUT:
             args.timeout = BUILD_DEFAULT_TIMEOUT
 
-        # Apply CLI args
+        # Resolve profile if specified
+        if args.profile:
+            build_config = load_build_config(UNITY_DIR)
+            if build_config is None:
+                print(
+                    f"Error: Build profile '{args.profile}' requested but "
+                    f"no .unity-bridge/build.json found.",
+                    file=sys.stderr,
+                )
+                return EXIT_ERROR
+
+            profiles = build_config.get("profiles", {})
+            if args.profile not in profiles:
+                available = ", ".join(profiles.keys()) if profiles else "none"
+                print(
+                    f"Error: Build profile '{args.profile}' not found. "
+                    f"Available profiles: {available}",
+                    file=sys.stderr,
+                )
+                return EXIT_ERROR
+
+            profile = profiles[args.profile]
+            # Profile provides defaults; CLI args override
+            if not args.method and "method" in profile:
+                params["method"] = profile["method"]
+            if "env" in profile and isinstance(profile["env"], dict):
+                env_pairs = [f"{k}={v}" for k, v in profile["env"].items()]
+                # Merge with any --env args
+                if args.env:
+                    env_pairs.extend(args.env)
+                params["env"] = ";".join(env_pairs)
+            if "timeout" in profile and args.timeout == BUILD_DEFAULT_TIMEOUT:
+                args.timeout = profile["timeout"]
+
+        # Apply direct CLI args (override profile)
         if args.method:
             params["method"] = args.method
         if args.target:
@@ -1086,6 +1150,9 @@ Examples:
             params["development"] = "true"
         if args.output:
             params["output"] = args.output
+        # Handle --env args when no profile or profile didn't set env
+        if args.env and "env" not in params:
+            params["env"] = ";".join(args.env)
 
     # Execute command
     try:

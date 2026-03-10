@@ -241,6 +241,11 @@ unity-bridge build --target Android --development
 # Custom build pipeline via static method invocation
 unity-bridge build --method MXR.Builder.BuildEntryPoints.BuildQuest
 
+# With environment variables
+unity-bridge build --method MXR.Builder.BuildEntryPoints.BuildQuest --env BUILD_TYPE=production --env SCRIPTING_BACKEND=il2cpp
+
+# Using a named build profile (from .unity-bridge/build.json)
+unity-bridge build --profile quest
 ```
 
 **Output (Success):**
@@ -269,13 +274,35 @@ Build Failed: 5 error(s), 2 warning(s)
 - `--method` - Fully qualified static method (e.g., `MXR.Builder.BuildEntryPoints.BuildQuest`)
 - `--target` - BuildTarget enum name (e.g., `Android`, `StandaloneWindows64`, `iOS`)
 - `--development` - Enable development build flag
+- `--env` - Environment variable `KEY=VALUE` (repeatable)
+- `--profile` - Named profile from `.unity-bridge/build.json`
 - `--output` - Override output path
 - `--timeout` - Override default 300s timeout
+
+**Build Profiles:**
+
+For projects with custom build pipelines, create `.unity-bridge/build.json` to define named profiles:
+
+```json
+{
+  "profiles": {
+    "quest": {
+      "method": "MXR.Builder.BuildEntryPoints.BuildQuest",
+      "env": { "BUILD_TYPE": "development", "SCRIPTING_BACKEND": "il2cpp" },
+      "timeout": 600
+    },
+    "pico": {
+      "method": "MXR.Builder.BuildEntryPoints.BuildPico"
+    }
+  }
+}
+```
 
 **Notes:**
 - Default timeout is 5 minutes (300s) — builds are long-running operations
 - Direct builds use the currently active build target if `--target` is not specified
-- Custom build methods should be configured to work within the editor environment (e.g., reading settings from EditorPrefs rather than requiring environment variables)
+- Environment variables are set before method invocation and cleaned up after
+- Profile settings are defaults; CLI arguments override them
 
 ### Advanced Options
 
@@ -353,6 +380,7 @@ When you're working in a Unity project directory, you can ask Claude Code to per
 - "Step one frame"
 - "Build for Android"
 - "Run the Quest build"
+- "Set up build profiles for my project"
 
 Claude Code will automatically use this skill to execute the commands via the Python script.
 

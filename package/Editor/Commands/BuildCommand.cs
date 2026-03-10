@@ -166,6 +166,23 @@ namespace MXR.ClaudeBridge.Commands {
                 return;
             }
 
+            // Set environment variables
+            var envVars = new Dictionary<string, string>();
+            var envString = request.@params?.env;
+
+            if (!string.IsNullOrEmpty(envString)) {
+                foreach (var pair in envString.Split(';')) {
+                    var trimmed = pair.Trim();
+                    if (string.IsNullOrEmpty(trimmed)) continue;
+                    var eqIdx = trimmed.IndexOf('=');
+                    if (eqIdx <= 0) continue;
+                    var key = trimmed.Substring(0, eqIdx);
+                    var val = trimmed.Substring(eqIdx + 1);
+                    Environment.SetEnvironmentVariable(key, val);
+                    envVars[key] = val;
+                }
+            }
+
             Debug.Log($"[ClaudeBridge] Invoking build method: {methodPath}");
 
             try {
@@ -198,6 +215,12 @@ namespace MXR.ClaudeBridge.Commands {
                     method = methodPath
                 };
                 onComplete?.Invoke(response);
+            }
+            finally {
+                // Cleanup: restore env vars
+                foreach (var kv in envVars) {
+                    Environment.SetEnvironmentVariable(kv.Key, null);
+                }
             }
         }
 
