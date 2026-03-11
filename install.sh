@@ -20,7 +20,7 @@ fi
 
 # Install via pip
 echo "Installing pip package..."
-python3 -m pip install --upgrade claude-unity-bridge
+python3 -m pip install --user --upgrade claude-unity-bridge
 
 # Get Python user scripts directory
 PYTHON_BIN="$(python3 -m site --user-base)/bin"

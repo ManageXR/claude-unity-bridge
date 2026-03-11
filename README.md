@@ -14,6 +14,7 @@ File-based bridge enabling Claude Code to trigger Unity Editor operations in a r
 - **Refresh** — Force asset database refresh
 - **Get Status** — Check editor compilation/update state
 - **Get Console Logs** — Retrieve Unity console output
+- **Play Mode Control** — Play, pause, and step through frames
 
 ## 🚀 Quick Start
 
