@@ -12,6 +12,7 @@ Complete specification for all Unity Bridge commands, including parameters, resp
 - [play](#play) - Toggle Play Mode
 - [pause](#pause) - Toggle pause in Play Mode
 - [step](#step) - Step one frame in Play Mode
+- [build](#build) - Build the project
 
 ---
 
@@ -914,6 +915,256 @@ unity-bridge get-status
 
 ---
 
+## build
+
+Build the Unity project using direct `BuildPipeline.BuildPlayer()` or invoke a custom build method via reflection.
+
+### Usage
+
+```bash
+unity-bridge build [options]
+```
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `--method` | string | No | None | Fully qualified static method to invoke |
+| `--target` | string | No | Active target | BuildTarget enum name |
+| `--development` | flag | No | False | Enable development build |
+| `--env` | string | No | None | Environment variable KEY=VALUE (repeatable) |
+| `--profile` | string | No | None | Named profile from build.json |
+| `--output` | string | No | Auto | Output path override |
+| `--timeout` | int | No | 300 | Command timeout in seconds |
+
+### Parameter Details
+
+**`--method`**
+- Fully qualified static method name: `Namespace.Class.Method`
+- Invoked via reflection (like Unity's `-executeMethod`)
+- Examples: `MXR.Builder.BuildEntryPoints.BuildQuest`, `MyProject.Build.Run`
+
+**`--target`**
+- Unity `BuildTarget` enum name (case-insensitive)
+- Common values: `Android`, `StandaloneWindows64`, `StandaloneOSX`, `iOS`, `WebGL`
+- Defaults to the currently active build target in Unity
+
+**`--env`**
+- Sets environment variables before build method invocation
+- Format: `KEY=VALUE`
+- Repeatable: `--env BUILD_TYPE=production --env BACKEND=il2cpp`
+- Variables are cleaned up after build completes
+
+**`--profile`**
+- Loads a named profile from `.unity-bridge/build.json`
+- Profile provides default method, env, and timeout
+- CLI arguments override profile values
+
+### Response Format
+
+**Success (direct build):**
+```json
+{
+  "id": "uuid",
+  "status": "success",
+  "action": "build",
+  "duration_ms": 45200,
+  "buildInfo": {
+    "buildResult": "Succeeded",
+    "totalErrors": 0,
+    "totalWarnings": 3,
+    "totalSeconds": 45.2,
+    "outputPath": "/path/to/Build_Android.apk",
+    "sizeBytes": 52428800,
+    "method": "direct"
+  }
+}
+```
+
+**Success (method build):**
+```json
+{
+  "id": "uuid",
+  "status": "success",
+  "action": "build",
+  "duration_ms": 120500,
+  "buildInfo": {
+    "buildResult": "Succeeded",
+    "totalErrors": 0,
+    "totalWarnings": 0,
+    "totalSeconds": 120.5,
+    "outputPath": "",
+    "sizeBytes": 0,
+    "method": "MXR.Builder.BuildEntryPoints.BuildQuest"
+  }
+}
+```
+
+**Failure:**
+```json
+{
+  "id": "uuid",
+  "status": "failure",
+  "action": "build",
+  "duration_ms": 30000,
+  "error": "Build Failed: 5 error(s), 2 warning(s)",
+  "buildInfo": {
+    "buildResult": "Failed",
+    "totalErrors": 5,
+    "totalWarnings": 2,
+    "totalSeconds": 30.0,
+    "outputPath": "",
+    "sizeBytes": 0,
+    "method": "direct"
+  }
+}
+```
+
+### Formatted Output
+
+**Success:**
+```
+✓ Build Succeeded
+Errors: 0
+Warnings: 3
+Build Time: 45.2s
+Output: /path/to/Build_Android.apk
+Size: 50.0 MB
+Duration: 45.20s
+```
+
+**Failure:**
+```
+✗ Build Failed
+Errors: 5
+Warnings: 2
+Build Time: 30.0s
+Duration: 30.00s
+
+Build Failed: 5 error(s), 2 warning(s)
+```
+
+### Build Profiles
+
+Create `.unity-bridge/build.json` to define named build profiles:
+
+```json
+{
+  "profiles": {
+    "quest": {
+      "method": "MXR.Builder.BuildEntryPoints.BuildQuest",
+      "env": { "BUILD_TYPE": "development" },
+      "timeout": 600
+    },
+    "pico": {
+      "method": "MXR.Builder.BuildEntryPoints.BuildPico"
+    }
+  },
+  "default": "quest"
+}
+```
+
+**Profile fields:**
+- `method` (string): Static method to invoke
+- `env` (object): Key-value environment variables
+- `timeout` (int): Override default timeout in seconds
+
+**Profile resolution:**
+1. Load `.unity-bridge/build.json`
+2. Find named profile
+3. Apply profile method, env, timeout as defaults
+4. CLI arguments override profile values
+
+### Error Scenarios
+
+**Invalid build target:**
+```json
+{
+  "id": "uuid",
+  "status": "error",
+  "action": "build",
+  "error": "Invalid build target: 'BadTarget'. Use Unity BuildTarget enum names (e.g., Android, StandaloneWindows64, iOS)."
+}
+```
+
+**No scenes in Build Settings:**
+```json
+{
+  "id": "uuid",
+  "status": "error",
+  "action": "build",
+  "error": "No scenes enabled in Build Settings. Add scenes via File > Build Settings."
+}
+```
+
+**Method not found:**
+```json
+{
+  "id": "uuid",
+  "status": "error",
+  "action": "build",
+  "error": "Static method not found: 'BuildQuest' on type 'MXR.Builder.NonExistent'."
+}
+```
+
+**Type not found:**
+```json
+{
+  "id": "uuid",
+  "status": "error",
+  "action": "build",
+  "error": "Type not found: 'MXR.Builder.NonExistent'. Ensure the class exists and is in a loaded assembly."
+}
+```
+
+**Profile not found (CLI error):**
+```
+Error: Build profile 'nonexistent' not found. Available profiles: quest, pico
+```
+
+### Notes
+
+- **Default timeout:** 5 minutes (300s) — builds take significantly longer than other commands
+- **Blocking:** Build operations block the Unity Editor main thread. No progress updates or other commands during build
+- **Exit protection:** The bridge hooks `EditorApplication.wantsToQuit` to prevent build methods from closing the editor. Build methods that call `EditorApplication.Exit()` will be blocked
+- **Environment variable:** `UNITY_BRIDGE_BUILD=true` is set before method invocation. Check this in your build code to skip `Exit()` calls when running through the bridge
+- **Direct build defaults:** Uses active build target, enabled scenes from Build Settings, output to `Builds/` directory
+
+### Examples
+
+```bash
+# Direct build with active target
+unity-bridge build
+
+# Direct build for Android
+unity-bridge build --target Android
+
+# Development build
+unity-bridge build --target Android --development
+
+# Custom build method
+unity-bridge build --method MXR.Builder.BuildEntryPoints.BuildQuest
+
+# With environment variables
+unity-bridge build --method MXR.Builder.BuildEntryPoints.BuildQuest \
+  --env BUILD_TYPE=production \
+  --env SCRIPTING_BACKEND=il2cpp
+
+# Using a build profile
+unity-bridge build --profile quest
+
+# Profile with CLI override
+unity-bridge build --profile quest --env BUILD_TYPE=production
+
+# With custom output path
+unity-bridge build --target Android --output ./builds/my-app.apk
+
+# Extended timeout for large builds
+unity-bridge build --method MyProject.Build.Run --timeout 600
+```
+
+---
+
 ## Common Patterns
 
 ### Check Compilation Status Before Running Tests
@@ -1123,6 +1374,7 @@ If commands frequently timeout:
 | refresh | 0.5-5s | Depends on changed assets |
 | run-tests (EditMode) | 1-30s | Depends on test count |
 | run-tests (PlayMode) | 5-60s+ | Slower due to Play Mode startup |
+| build | 30-600s+ | Depends on project size and target |
 
 ### Optimization Tips
 

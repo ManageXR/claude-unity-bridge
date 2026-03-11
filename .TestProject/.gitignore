@@ -6,6 +6,12 @@
 !README.md
 !VALIDATION.md
 
+# Keep test Editor scripts (custom build entry points, etc.)
+!Assets/
+!Assets/Editor/
+!Assets/Editor/*.cs
+!Assets/Editor/*.cs.meta
+
 # Keep ProjectSettings directory
 !ProjectSettings/
 !ProjectSettings/*.txt
@@ -18,6 +24,10 @@ ProjectSettings/*.meta
 # Keep Packages directory for manifest
 !Packages/
 !Packages/manifest.json
+
+# Build output artifacts
+Builds/
+Assets/Scenes/
 
 # .unity-bridge/ is created at runtime by Unity Bridge - always ignore
 .unity-bridge/
