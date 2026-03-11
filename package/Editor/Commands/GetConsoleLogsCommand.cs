@@ -26,7 +26,7 @@ namespace MXR.ClaudeBridge.Commands {
         public void Execute(CommandRequest request, Action<CommandResponse> onProgress, Action<CommandResponse> onComplete) {
             var stopwatch = Stopwatch.StartNew();
 #if DEBUG
-            Debug.Log("[ClaudeBridge] Getting console logs");
+            Debug.Log(ClaudeBridge.LogPrefix + " Getting console logs");
 #endif
 
             try {
@@ -52,7 +52,7 @@ namespace MXR.ClaudeBridge.Commands {
             }
             catch (Exception e) {
                 stopwatch.Stop();
-                Debug.LogError($"[ClaudeBridge] Error in GetConsoleLogsCommand: {e.Message}");
+                Debug.LogError($"{ClaudeBridge.LogPrefix} Error in GetConsoleLogsCommand: {e.Message}");
                 var response = CommandResponse.Failure(request.id, request.action, stopwatch.ElapsedMilliseconds, e.Message);
                 onComplete?.Invoke(response);
             }
@@ -65,7 +65,7 @@ namespace MXR.ClaudeBridge.Commands {
                 // Use reflection to access Unity's internal LogEntries class
                 var logEntriesType = Type.GetType("UnityEditor.LogEntries, UnityEditor");
                 if (logEntriesType == null) {
-                    Debug.LogWarning("[ClaudeBridge] Could not access LogEntries type");
+                    Debug.LogWarning(ClaudeBridge.LogPrefix + " Could not access LogEntries type");
                     return result;
                 }
 
@@ -75,7 +75,7 @@ namespace MXR.ClaudeBridge.Commands {
                 var endGettingEntriesMethod = logEntriesType.GetMethod("EndGettingEntries", BindingFlags.Static | BindingFlags.Public);
 
                 if (getCountMethod == null || getEntryInternalMethod == null) {
-                    Debug.LogWarning("[ClaudeBridge] Could not access LogEntries methods");
+                    Debug.LogWarning(ClaudeBridge.LogPrefix + " Could not access LogEntries methods");
                     return result;
                 }
 
@@ -152,7 +152,7 @@ namespace MXR.ClaudeBridge.Commands {
                 endGettingEntriesMethod?.Invoke(null, null);
             }
             catch (Exception e) {
-                Debug.LogError($"[ClaudeBridge] Error getting console logs: {e.Message}");
+                Debug.LogError($"{ClaudeBridge.LogPrefix} Error getting console logs: {e.Message}");
             }
 
             return result;

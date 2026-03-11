@@ -10,6 +10,8 @@ using UnityEngine;
 namespace MXR.ClaudeBridge {
     [InitializeOnLoad]
     public static class ClaudeBridge {
+        public const string LogPrefix = "[ClaudeBridge]";
+
         private static readonly string CommandDir;
         private static readonly string CommandFilePath;
         private static readonly Dictionary<string, ICommand> Commands;
@@ -53,7 +55,7 @@ namespace MXR.ClaudeBridge {
             EditorApplication.update += PollForCommands;
 
 #if DEBUG
-            Debug.Log($"[ClaudeBridge] Initialized - Watching: {CommandDir}");
+            Debug.Log($"{LogPrefix} Initialized - Watching: {CommandDir}");
 #endif
         }
 
@@ -82,7 +84,7 @@ namespace MXR.ClaudeBridge {
             // Auto-recover from stuck processing state
             if (_isProcessingCommand) {
                 if ((DateTime.Now - _commandStartTime).TotalSeconds > COMMAND_TIMEOUT_SECONDS) {
-                    Debug.LogWarning($"[ClaudeBridge] Command {_currentCommandId} timed out after {COMMAND_TIMEOUT_SECONDS}s, resetting state");
+                    Debug.LogWarning($"{LogPrefix} Command {_currentCommandId} timed out after {COMMAND_TIMEOUT_SECONDS}s, resetting state");
                     ResetProcessingState();
                 } else {
                     // Bridge is busy - respond with error so client doesn't hang
@@ -108,7 +110,7 @@ namespace MXR.ClaudeBridge {
                 var request = JsonUtility.FromJson<CommandRequest>(json);
 
                 if (request != null && !string.IsNullOrEmpty(request.id)) {
-                    Debug.LogWarning($"[ClaudeBridge] Rejecting command {request.id} - bridge is busy processing {_currentCommandId}");
+                    Debug.LogWarning($"{LogPrefix} Rejecting command {request.id} - bridge is busy processing {_currentCommandId}");
                     WriteResponse(CommandResponse.Error(request.id, request.action ?? "unknown",
                         $"Bridge is busy processing another command ({_currentCommandId}). Try again later."));
                 }
@@ -116,7 +118,7 @@ namespace MXR.ClaudeBridge {
                 DeleteCommandFile();
             }
             catch (Exception e) {
-                Debug.LogError($"[ClaudeBridge] Error handling busy response: {e.Message}");
+                Debug.LogError($"{LogPrefix} Error handling busy response: {e.Message}");
                 DeleteCommandFile();
             }
         }
@@ -146,13 +148,13 @@ namespace MXR.ClaudeBridge {
                 // Mutating command during compilation — reject with informative error
                 DeleteCommandFile();
                 var state = EditorApplication.isCompiling ? "compiling" : "updating";
-                Debug.LogWarning($"[ClaudeBridge] Rejecting command {request.action} ({request.id}) - Unity is {state}");
+                Debug.LogWarning($"{LogPrefix} Rejecting command {request.action} ({request.id}) - Unity is {state}");
                 WriteResponse(CommandResponse.Error(request.id, request.action,
                     $"Unity Editor is currently {state}. Only read-only commands (get-status, get-console-logs) are available. Try again later."));
                 return true;
             }
             catch (Exception e) {
-                Debug.LogError($"[ClaudeBridge] Error peeking at command during compile: {e.Message}");
+                Debug.LogError($"{LogPrefix} Error peeking at command during compile: {e.Message}");
                 DeleteCommandFile();
                 return true;
             }
@@ -171,7 +173,7 @@ namespace MXR.ClaudeBridge {
                 request = JsonUtility.FromJson<CommandRequest>(json);
 
                 if (request == null || string.IsNullOrEmpty(request.id)) {
-                    Debug.LogError("[ClaudeBridge] Invalid command file - missing id");
+                    Debug.LogError(LogPrefix + " Invalid command file - missing id");
                     DeleteCommandFile();
                     return;
                 }
@@ -184,11 +186,11 @@ namespace MXR.ClaudeBridge {
                 _commandStartTime = DateTime.Now;
 
 #if DEBUG
-                Debug.Log($"[ClaudeBridge] Processing command: {request.action} (id: {request.id})");
+                Debug.Log($"{LogPrefix} Processing command: {request.action} (id: {request.id})");
 #endif
 
                 if (!Commands.TryGetValue(request.action, out var command)) {
-                    Debug.LogError($"[ClaudeBridge] Unknown action: {request.action}");
+                    Debug.LogError($"{LogPrefix} Unknown action: {request.action}");
                     WriteResponse(CommandResponse.Error(request.id, request.action, $"Unknown action: {request.action}"));
                     _isProcessingCommand = false;
                     return;
@@ -197,7 +199,7 @@ namespace MXR.ClaudeBridge {
                 command.Execute(request, OnProgress, OnComplete);
             }
             catch (Exception e) {
-                Debug.LogError($"[ClaudeBridge] Error processing command: {e.Message}");
+                Debug.LogError($"{LogPrefix} Error processing command: {e.Message}");
                 DeleteCommandFile();
 
                 if (request != null) {
@@ -226,7 +228,7 @@ namespace MXR.ClaudeBridge {
             try {
                 // Security: Validate response ID to prevent path traversal attacks
                 if (string.IsNullOrEmpty(response.id) || !ValidIdPattern.IsMatch(response.id)) {
-                    Debug.LogError($"[ClaudeBridge] Invalid response ID format: {response.id}");
+                    Debug.LogError($"{LogPrefix} Invalid response ID format: {response.id}");
                     return;
                 }
 
@@ -254,7 +256,7 @@ namespace MXR.ClaudeBridge {
                 File.Move(tempPath, responsePath);
             }
             catch (Exception e) {
-                Debug.LogError($"[ClaudeBridge] Error writing response: {e.Message}");
+                Debug.LogError($"{LogPrefix} Error writing response: {e.Message}");
             }
         }
 
@@ -265,7 +267,7 @@ namespace MXR.ClaudeBridge {
                 }
             }
             catch (Exception e) {
-                Debug.LogError($"[ClaudeBridge] Error deleting command file: {e.Message}");
+                Debug.LogError($"{LogPrefix} Error deleting command file: {e.Message}");
             }
         }
 
@@ -282,7 +284,7 @@ namespace MXR.ClaudeBridge {
                 if (info.LastWriteTime < cutoff) {
                     try {
                         File.Delete(file);
-                        Debug.Log($"[ClaudeBridge] Cleaned up: {Path.GetFileName(file)}");
+                        Debug.Log($"{LogPrefix} Cleaned up: {Path.GetFileName(file)}");
                     }
                     catch {
                         // Ignore errors during cleanup
@@ -294,16 +296,16 @@ namespace MXR.ClaudeBridge {
         [MenuItem("Tools/Claude Bridge/Reset Processing State")]
         private static void ResetProcessingStateMenu() {
             if (_isProcessingCommand) {
-                Debug.Log($"[ClaudeBridge] Manually resetting processing state (was processing: {_currentCommandId})");
+                Debug.Log($"{LogPrefix} Manually resetting processing state (was processing: {_currentCommandId})");
                 ResetProcessingState();
             } else {
-                Debug.Log("[ClaudeBridge] No command is currently being processed");
+                Debug.Log(LogPrefix + " No command is currently being processed");
             }
         }
 
         [MenuItem("Tools/Claude Bridge/Show Status")]
         private static void ShowStatus() {
-            Debug.Log($"[ClaudeBridge] Status:");
+            Debug.Log($"{LogPrefix} Status:");
             Debug.Log($"  Command directory: {CommandDir}");
             Debug.Log($"  Is processing: {_isProcessingCommand}");
             Debug.Log($"  Current command ID: {_currentCommandId ?? "none"}");

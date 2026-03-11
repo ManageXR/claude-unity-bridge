@@ -21,7 +21,7 @@ namespace MXR.ClaudeBridge.Commands {
             _hasErrors = false;
 
 #if DEBUG
-            UnityEngine.Debug.Log("[ClaudeBridge] Starting script compilation");
+            UnityEngine.Debug.Log(ClaudeBridge.LogPrefix + " Starting script compilation");
 #endif
 
             var response = CommandResponse.Running(_commandId, request.action);
@@ -37,7 +37,7 @@ namespace MXR.ClaudeBridge.Commands {
             foreach (var message in messages) {
                 if (message.type == CompilerMessageType.Error) {
                     _hasErrors = true;
-                    UnityEngine.Debug.LogError($"[ClaudeBridge] Compilation error: {message.message}");
+                    UnityEngine.Debug.LogError($"{ClaudeBridge.LogPrefix} Compilation error: {message.message}");
                 }
             }
         }
@@ -48,7 +48,7 @@ namespace MXR.ClaudeBridge.Commands {
 
             _stopwatch.Stop();
 #if DEBUG
-            UnityEngine.Debug.Log($"[ClaudeBridge] Compilation finished - HasErrors: {_hasErrors}");
+            UnityEngine.Debug.Log($"{ClaudeBridge.LogPrefix} Compilation finished - HasErrors: {_hasErrors}");
 #endif
 
             var response = _hasErrors

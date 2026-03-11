@@ -11,7 +11,7 @@ namespace MXR.ClaudeBridge.Commands {
             var stopwatch = Stopwatch.StartNew();
 
 #if DEBUG
-            Debug.Log("[ClaudeBridge] Refreshing asset database");
+            Debug.Log(ClaudeBridge.LogPrefix + " Refreshing asset database");
 #endif
 
             var response = CommandResponse.Running(request.id, request.action);
@@ -22,13 +22,13 @@ namespace MXR.ClaudeBridge.Commands {
                 stopwatch.Stop();
 
 #if DEBUG
-                Debug.Log("[ClaudeBridge] Asset database refresh completed");
+                Debug.Log(ClaudeBridge.LogPrefix + " Asset database refresh completed");
 #endif
                 onComplete?.Invoke(CommandResponse.Success(request.id, request.action, stopwatch.ElapsedMilliseconds));
             }
             catch (Exception e) {
                 stopwatch.Stop();
-                Debug.LogError($"[ClaudeBridge] Asset database refresh failed: {e.Message}");
+                Debug.LogError($"{ClaudeBridge.LogPrefix} Asset database refresh failed: {e.Message}");
                 onComplete?.Invoke(CommandResponse.Error(request.id, request.action, e.Message));
             }
         }

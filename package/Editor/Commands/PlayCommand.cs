@@ -21,7 +21,7 @@ namespace MXR.ClaudeBridge.Commands {
                 stopwatch.Stop();
 
 #if DEBUG
-                Debug.Log($"[ClaudeBridge] Play mode toggled: isPlaying={willPlay}");
+                Debug.Log($"{ClaudeBridge.LogPrefix} Play mode toggled: isPlaying={willPlay}");
 #endif
 
                 var response = CommandResponse.Success(request.id, request.action, stopwatch.ElapsedMilliseconds);
@@ -35,7 +35,7 @@ namespace MXR.ClaudeBridge.Commands {
             }
             catch (Exception e) {
                 stopwatch.Stop();
-                Debug.LogError($"[ClaudeBridge] Play mode toggle failed: {e.Message}");
+                Debug.LogError($"{ClaudeBridge.LogPrefix} Play mode toggle failed: {e.Message}");
                 onComplete?.Invoke(CommandResponse.Error(request.id, request.action, e.Message));
             }
         }

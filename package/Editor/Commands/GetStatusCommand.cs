@@ -10,7 +10,7 @@ namespace MXR.ClaudeBridge.Commands {
         public void Execute(CommandRequest request, Action<CommandResponse> onProgress, Action<CommandResponse> onComplete) {
             var stopwatch = Stopwatch.StartNew();
 #if DEBUG
-            Debug.Log("[ClaudeBridge] Getting editor status");
+            Debug.Log(ClaudeBridge.LogPrefix + " Getting editor status");
 #endif
 
             // Use the proper EditorStatus model instead of overloading the error field

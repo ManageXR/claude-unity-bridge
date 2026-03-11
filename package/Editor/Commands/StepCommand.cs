@@ -27,7 +27,7 @@ namespace MXR.ClaudeBridge.Commands {
                 stopwatch.Stop();
 
 #if DEBUG
-                Debug.Log("[ClaudeBridge] Editor stepped one frame");
+                Debug.Log(ClaudeBridge.LogPrefix + " Editor stepped one frame");
 #endif
 
                 var response = CommandResponse.Success(request.id, request.action, stopwatch.ElapsedMilliseconds);
@@ -41,7 +41,7 @@ namespace MXR.ClaudeBridge.Commands {
             }
             catch (Exception e) {
                 stopwatch.Stop();
-                Debug.LogError($"[ClaudeBridge] Step failed: {e.Message}");
+                Debug.LogError($"{ClaudeBridge.LogPrefix} Step failed: {e.Message}");
                 onComplete?.Invoke(CommandResponse.Error(request.id, request.action, e.Message));
             }
         }

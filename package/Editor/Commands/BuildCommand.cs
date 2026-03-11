@@ -20,7 +20,7 @@ namespace MXR.ClaudeBridge.Commands {
             var stopwatch = Stopwatch.StartNew();
             var method = request.@params?.method;
 
-            Debug.Log($"[ClaudeBridge] Build command received - method: {method ?? "direct"}");
+            Debug.Log($"{ClaudeBridge.LogPrefix} Build command received - method: {method ?? "direct"}");
 
             // Report running status
             var progressResponse = CommandResponse.Running(request.id, request.action);
@@ -35,7 +35,7 @@ namespace MXR.ClaudeBridge.Commands {
             }
             catch (Exception e) {
                 stopwatch.Stop();
-                Debug.LogError($"[ClaudeBridge] Build error: {e.Message}");
+                Debug.LogError($"{ClaudeBridge.LogPrefix} Build error: {e.Message}");
                 onComplete?.Invoke(
                     CommandResponse.Error(request.id, request.action, e.Message)
                 );
@@ -91,7 +91,7 @@ namespace MXR.ClaudeBridge.Commands {
                 options = isDev ? BuildOptions.Development : BuildOptions.None
             };
 
-            Debug.Log($"[ClaudeBridge] Starting direct build: target={target}, dev={isDev}, output={outputPath}");
+            Debug.Log($"{ClaudeBridge.LogPrefix} Starting direct build: target={target}, dev={isDev}, output={outputPath}");
 
             BuildReport report = BuildPipeline.BuildPlayer(options);
             stopwatch.Stop();
@@ -108,10 +108,10 @@ namespace MXR.ClaudeBridge.Commands {
 
             CommandResponse response;
             if (report.summary.result == BuildResult.Succeeded) {
-                Debug.Log($"[ClaudeBridge] Build succeeded: {report.summary.totalSize} bytes in {buildInfo.totalSeconds:F1}s");
+                Debug.Log($"{ClaudeBridge.LogPrefix} Build succeeded: {report.summary.totalSize} bytes in {buildInfo.totalSeconds:F1}s");
                 response = CommandResponse.Success(request.id, request.action, stopwatch.ElapsedMilliseconds);
             } else {
-                Debug.LogError($"[ClaudeBridge] Build failed: {report.summary.result}");
+                Debug.LogError($"{ClaudeBridge.LogPrefix} Build failed: {report.summary.result}");
                 response = CommandResponse.Failure(
                     request.id, request.action, stopwatch.ElapsedMilliseconds,
                     $"Build {report.summary.result}: {report.summary.totalErrors} error(s), {report.summary.totalWarnings} warning(s)"
@@ -183,7 +183,7 @@ namespace MXR.ClaudeBridge.Commands {
                 }
             }
 
-            Debug.Log($"[ClaudeBridge] Invoking build method: {methodPath}");
+            Debug.Log($"{ClaudeBridge.LogPrefix} Invoking build method: {methodPath}");
 
             try {
                 targetMethod.Invoke(null, null);
@@ -195,7 +195,7 @@ namespace MXR.ClaudeBridge.Commands {
                     method = methodPath
                 };
 
-                Debug.Log($"[ClaudeBridge] Method build completed in {buildInfo.totalSeconds:F1}s");
+                Debug.Log($"{ClaudeBridge.LogPrefix} Method build completed in {buildInfo.totalSeconds:F1}s");
                 var response = CommandResponse.Success(request.id, request.action, stopwatch.ElapsedMilliseconds);
                 response.buildInfo = buildInfo;
                 onComplete?.Invoke(response);
@@ -203,7 +203,7 @@ namespace MXR.ClaudeBridge.Commands {
             catch (TargetInvocationException tie) {
                 stopwatch.Stop();
                 var inner = tie.InnerException ?? tie;
-                Debug.LogError($"[ClaudeBridge] Method build threw exception: {inner.Message}");
+                Debug.LogError($"{ClaudeBridge.LogPrefix} Method build threw exception: {inner.Message}");
 
                 var response = CommandResponse.Failure(
                     request.id, request.action, stopwatch.ElapsedMilliseconds,
