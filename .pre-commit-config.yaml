@@ -4,9 +4,10 @@
 repos:
   # Python formatting with black
   - repo: https://github.com/psf/black
-    rev: 3702ba224ecffbcec30af640c149f231d90aebdb  # 24.4.2
+    rev: c6755bb741b6481d6b3d3bb563c83fa060db96c9  # 26.3.1
     hooks:
       - id: black
+        language_version: python3.11
         files: ^skill/
         args: [--line-length=100]
 
