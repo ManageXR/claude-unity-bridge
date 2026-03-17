@@ -27,7 +27,7 @@ namespace MXR.ClaudeBridge.Commands {
                 stopwatch.Stop();
 
 #if DEBUG
-                Debug.Log($"[ClaudeBridge] Pause toggled: isPaused={_editor.IsPaused}");
+                Debug.Log($"{ClaudeBridge.LogPrefix} Pause toggled: isPaused={_editor.IsPaused}");
 #endif
 
                 var response = CommandResponse.Success(request.id, request.action, stopwatch.ElapsedMilliseconds);
@@ -41,7 +41,7 @@ namespace MXR.ClaudeBridge.Commands {
             }
             catch (Exception e) {
                 stopwatch.Stop();
-                Debug.LogError($"[ClaudeBridge] Pause toggle failed: {e.Message}");
+                Debug.LogError($"{ClaudeBridge.LogPrefix} Pause toggle failed: {e.Message}");
                 onComplete?.Invoke(CommandResponse.Error(request.id, request.action, e.Message));
             }
         }
