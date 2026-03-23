@@ -1,11 +1,15 @@
 # 🌉 Claude Unity Bridge
 
+[![PyPI](https://img.shields.io/pypi/v/claude-unity-bridge)](https://pypi.org/project/claude-unity-bridge/)
+[![PyPI Downloads](https://img.shields.io/pypi/dm/claude-unity-bridge)](https://pypi.org/project/claude-unity-bridge/)
 [![GitHub release](https://img.shields.io/github/v/release/ManageXR/claude-unity-bridge)](https://github.com/ManageXR/claude-unity-bridge/releases)
-![CI](https://github.com/ManageXR/claude-unity-bridge/actions/workflows/test-skill.yml/badge.svg)
+[![CI](https://github.com/ManageXR/claude-unity-bridge/actions/workflows/test-skill.yml/badge.svg)](https://github.com/ManageXR/claude-unity-bridge/actions/workflows/test-skill.yml)
 [![codecov](https://codecov.io/gh/ManageXR/claude-unity-bridge/graph/badge.svg?token=3PHF2GXHON)](https://codecov.io/gh/ManageXR/claude-unity-bridge)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 ![Unity 2021.3+](https://img.shields.io/badge/Unity-2021.3%2B-black.svg)
+![Python 3.8+](https://img.shields.io/badge/Python-3.8%2B-blue.svg)
 
-File-based bridge enabling Claude Code to trigger Unity Editor operations in a running editor instance.
+File-based bridge enabling [Claude Code](https://docs.anthropic.com/en/docs/claude-code) to trigger Unity Editor operations in a running editor instance.
 
 ## ✨ Features
 

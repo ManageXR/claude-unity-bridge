@@ -5,10 +5,45 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "claude-unity-bridge"
 version = "0.3.0"
-description = "Control Unity Editor from Claude Code"
-readme = "SKILL.md"
+description = "Control Unity Editor from Claude Code — run tests, compile, get logs, build, and more via a file-based bridge"
+readme = "README.md"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.8"
+keywords = [
+    "unity",
+    "claude",
+    "claude-code",
+    "game-development",
+    "unity-editor",
+    "automation",
+    "testing",
+    "bridge",
+    "cli",
+    "ai-agent",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Games/Entertainment",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: Testing",
+]
+
+[project.urls]
+Homepage = "https://github.com/ManageXR/claude-unity-bridge"
+Repository = "https://github.com/ManageXR/claude-unity-bridge"
+Issues = "https://github.com/ManageXR/claude-unity-bridge/issues"
+Changelog = "https://github.com/ManageXR/claude-unity-bridge/releases"
+PyPI = "https://pypi.org/project/claude-unity-bridge/"
 
 [project.scripts]
 unity-bridge = "claude_unity_bridge.cli:main"
