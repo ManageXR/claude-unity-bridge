@@ -8,7 +8,7 @@ version = "0.3.0"
 description = "Control Unity Editor from Claude Code — run tests, compile, get logs, build, and more via a file-based bridge"
 readme = "README.md"
 license = {text = "Apache-2.0"}
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 keywords = [
     "unity",
     "claude",
@@ -28,7 +28,6 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
