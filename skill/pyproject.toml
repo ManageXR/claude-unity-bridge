@@ -48,7 +48,7 @@ PyPI = "https://pypi.org/project/claude-unity-bridge/"
 unity-bridge = "claude_unity_bridge.cli:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "pytest-cov>=4.0", "black>=23.0", "flake8>=6.0"]
+dev = ["pytest>=9.1.1", "pytest-cov>=4.0", "black>=23.0", "flake8>=6.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
