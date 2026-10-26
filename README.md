@@ -1,5 +1,9 @@
 # 🌉 Claude Unity Bridge
 
+> [!IMPORTANT]
+> **This project is archived and no longer maintained.** The Unity CLI now covers what this bridge did, and it is free to use. Use it instead. The PyPI package and existing releases stay available but will not get updates.
+
+
 ![Unity 2021.3+](https://img.shields.io/badge/Unity-2021.3%2B-black.svg)
 ![Python 3.8+](https://img.shields.io/badge/Python-3.8%2B-blue.svg)
 
